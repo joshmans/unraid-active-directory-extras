@@ -20,8 +20,11 @@
 		min="6.9.0">
 
 <CHANGES>
-##&name;
-###&version;
+###2026.08.24
+- Fix: Per-file TDB backup retention instead of global retention.
+- Fix: Atomic staging for TDB backup and restore to avoid partial-write corruption.
+
+###2025.02.15
 - Fix: Don't check for AD being enabled on startup or shutdown.
 
 ###2025.01.29
