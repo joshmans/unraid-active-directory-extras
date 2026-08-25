@@ -39,8 +39,10 @@ apply_settings()
 	if [ -f "$pid_file" ]; then
 		smb_pid=$(cat "$pid_file")
 		/usr/bin/smbcontrol "$smb_pid" reload-config 2>&1
+		echo "Active Directory settings applied successfully."
 	else
 		logger "Error: smbd PID file not found." -t$PROG_NAME
+		echo "Error: smbd PID file not found. Settings may not have been applied."
 		return 1
 	fi
 
