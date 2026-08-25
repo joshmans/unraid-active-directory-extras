@@ -1,35 +1,72 @@
 #!/bin/bash
 # Custom startup script for restoring TDB databases
+#
+# Restores, for each distinct database basename, only the NEWEST timestamped
+# generation on persistent storage (matches the <basename>.tdb.<timestamp>
+# scheme written by rc.shutdown and pruned by rc.cleanup — see
+# AI_REFACTOR_BRIEF.md, section 4, bug #1).
+#
+# Each restore is staged under a temp name and atomically renamed into place
+# rather than copied live (see AI_REFACTOR_BRIEF.md, section 4, bug #2).
 
-# Define source and destination directories
 TDB_SOURCE="/boot/config/plugins/active.directory/database"
 TDB_DEST="/var/lib/samba"
 
-# Restore TDB files from persistent storage
-if [ -d "$TDB_SOURCE" ]; then
-    # Check if there are TDB files to restore
-    tdb_files=("$TDB_SOURCE"/*.tdb)
-    if [ -e "${tdb_files[0]}" ]; then
-		# Stop samba
-		/etc/rc.d/rc.samba stop &>/dev/null
-
-        echo "Restoring TDB files from persistent storage..."
-        cp -u "$TDB_SOURCE"/*.tdb "$TDB_DEST"
-
-        # Restore ownership and permissions
-        echo "Restoring permissions..."
-        chown -R root:root "$TDB_DEST"
-        chmod -R 600 "$TDB_DEST"/*.tdb
-
-		# Start samba
-		/etc/rc.d/rc.samba start &>/dev/null
-
-        echo "TDB files restored to $TDB_DEST."
-    else
-        echo "No TDB files found in $TDB_SOURCE. Skipping restoration."
-    fi
-else
+if [ ! -d "$TDB_SOURCE" ]; then
     echo "Warning: TDB source directory $TDB_SOURCE does not exist."
+    exit 0
 fi
+
+# Distinct base filenames, derived by stripping the trailing timestamp
+basenames=$(find "$TDB_SOURCE" -maxdepth 1 -name '*.tdb.*' -printf '%f\n' 2>/dev/null \
+    | sed -E 's/\.tdb\.[0-9]+-[0-9]+$/.tdb/' \
+    | sort -u)
+
+if [ -z "$basenames" ]; then
+    echo "No TDB backups found in $TDB_SOURCE. Skipping restoration."
+    exit 0
+fi
+
+# Stop samba before touching any live TDB files
+/etc/rc.d/rc.samba stop &>/dev/null
+
+echo "Restoring TDB files from persistent storage..."
+
+restored_any=0
+
+while IFS= read -r base; do
+    # Newest generation for this basename (mtime-sorted via find, not ls -t,
+    # to handle filenames safely regardless of characters used)
+    newest=$(find "$TDB_SOURCE" -maxdepth 1 -name "${base}.*" -printf '%T@ %p\n' 2>/dev/null \
+        | sort -rn | head -n 1 | cut -d' ' -f2-)
+
+    if [ -z "$newest" ]; then
+        echo "Warning: no readable generation found for $base, skipping."
+        continue
+    fi
+
+    dest_final="$TDB_DEST/$base"
+    dest_tmp="$TDB_DEST/.${base}.tmp"
+
+    if cp "$newest" "$dest_tmp"; then
+        mv -f "$dest_tmp" "$dest_final"
+        echo "Restored $base <- $newest"
+        restored_any=1
+    else
+        echo "Warning: failed to restore $base from $newest."
+        rm -f "$dest_tmp"
+    fi
+done <<< "$basenames"
+
+if [ "$restored_any" -eq 1 ]; then
+    echo "Restoring permissions..."
+    chown -R root:root "$TDB_DEST"
+    chmod -R 600 "$TDB_DEST"/*.tdb 2>/dev/null
+fi
+
+# Start samba regardless — if nothing restored, Samba just starts fresh
+/etc/rc.d/rc.samba start &>/dev/null
+
+echo "TDB restoration complete."
 
 exit 0

@@ -1,17 +1,52 @@
 #!/bin/bash
 # Custom shutdown script for copying TDB databases
+#
+# Writes each TDB file to persistent storage with a timestamp suffix
+# (<basename>.<timestamp>) instead of overwriting a single fixed copy, so
+# rc.cleanup can retain N generations per distinct database rather than
+# a single global "most recent 5 files" pool (see AI_REFACTOR_BRIEF.md,
+# section 4, bug #1).
+#
+# Each file is staged under a .tmp name and atomically renamed into place
+# (see AI_REFACTOR_BRIEF.md, section 4, bug #2) so a backup interrupted
+# mid-write never leaves a partially-copied file at its final, trusted name.
 
-# Define source and destination directories
 TDB_SOURCE="/var/lib/samba"
 TDB_DEST="/boot/config/plugins/active.directory/database"
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
-# Copy TDB files to persistent storage
-if [ -d "$TDB_SOURCE" ]; then
-    echo "Copying TDB files to persistent storage..."
-    cp -u "$TDB_SOURCE"/*.tdb "$TDB_DEST"
-    echo "TDB files copied to $TDB_DEST."
-else
+if [ ! -d "$TDB_SOURCE" ]; then
     echo "Warning: TDB source directory $TDB_SOURCE does not exist."
+    exit 0
 fi
+
+mkdir -p "$TDB_DEST"
+
+echo "Copying TDB files to persistent storage..."
+
+shopt -s nullglob
+tdb_files=("$TDB_SOURCE"/*.tdb)
+shopt -u nullglob
+
+if [ ${#tdb_files[@]} -eq 0 ]; then
+    echo "No TDB files found in $TDB_SOURCE. Nothing to back up."
+    exit 0
+fi
+
+for src in "${tdb_files[@]}"; do
+    base=$(basename "$src")
+    dest_final="$TDB_DEST/${base}.${TIMESTAMP}"
+    dest_tmp="$TDB_DEST/.${base}.${TIMESTAMP}.tmp"
+
+    if cp "$src" "$dest_tmp"; then
+        mv -f "$dest_tmp" "$dest_final"
+        echo "Backed up $base -> $dest_final"
+    else
+        echo "Warning: failed to copy $src, leaving previous generations untouched."
+        rm -f "$dest_tmp"
+    fi
+done
+
+echo "TDB files copied to $TDB_DEST."
 
 exit 0
