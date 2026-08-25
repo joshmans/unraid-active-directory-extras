@@ -23,6 +23,7 @@
 ###2026.08.24
 - Fix: Per-file TDB backup retention instead of global retention.
 - Fix: Atomic staging for TDB backup and restore to avoid partial-write corruption.
+- Fix: Validate TDB integrity before restoring, fall back to older generation.
 
 ###2025.02.15
 - Fix: Don't check for AD being enabled on startup or shutdown.
