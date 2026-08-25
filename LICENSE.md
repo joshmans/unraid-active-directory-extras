@@ -1,4 +1,4 @@
-### Tips and Tweaks plugin for unRAID
+### Active Directory plugin for unRAID
 
 Copyright (C) 2023 Dan Landon
 
