@@ -1,13 +1,14 @@
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name		"active.directory">
-<!ENTITY author		"dlandon">
-<!ENTITY version	"2025.02.19">
+<!ENTITY author		"joshmans">
+<!ENTITY repo		"unraid-active-directory-extras">
+<!ENTITY version	"2026.08.25a">
 <!ENTITY launch		"Settings/SMB">
-<!ENTITY gitURL		"https://raw.githubusercontent.com/&author;/&name;/master">
+<!ENTITY gitURL		"https://raw.githubusercontent.com/&author;/&repo;/main">
 <!ENTITY pluginURL	"&gitURL;/&name;.plg">
-<!ENTITY supportURL	"https://forums.unraid.net/topic/137467-active-directory-extras-plugin-allows-tweaking-some-ad-settings-in-samba/#comment-1248698">
-<!ENTITY MD5		"bb73caab7ca0223f378816b2eceb4820">
+<!ENTITY supportURL	"https://github.com/&author;/&repo;/issues">
+<!ENTITY SHA256		"53a616b9534dbba8b4eb34f05f29274bba9e02df7c4236c3255752b835ed39f3">
 ]>
 
 <PLUGIN	name="&name;"
@@ -20,6 +21,12 @@
 		min="6.9.0">
 
 <CHANGES>
+###2026.08.25a
+- Fork: Rebranded plugin manifest for community fork — updated author,
+  gitURL, and supportURL to point at the maintained fork instead of the
+  removed upstream repository. See README.md for full provenance.
+- Change: Use SHA256 instead of MD5 for package integrity verification.
+
 ###2026.08.25
 - Fix: Surface apply_settings() success/failure to the GUI instead of failing silently.
 
@@ -89,8 +96,10 @@
 </CHANGES>
 
 <!--
-Copyright 2023-2024, Dan Landon
+Original copyright 2023-2025, Dan Landon.
+Fork maintenance copyright 2026, joshmans.
 This plugin lets you set some Active Directory settings.
+This is a community-maintained fork — see README.md for provenance.
 -->
 
 <!--
@@ -98,7 +107,7 @@ Get the plugin bundle.
 -->
 <FILE Name="/boot/config/plugins/&name;/&name;-&version;.tgz">
 <URL>"&gitURL;/&name;-&version;.tgz"</URL>
-<MD5>&MD5;</MD5>
+<SHA256>&SHA256;</SHA256>
 </FILE>
 
 <!--
@@ -178,7 +187,7 @@ at -M -f /tmp/&name;/add-smb now 2>/dev/null
 echo ""
 echo "-----------------------------------------------------------"
 echo " &name; is installed."
-echo " Copyright 2025 &author;"
+echo " Copyright 2025 Dan Landon, 2026 fork maintenance &author;"
 echo " Version: &version;"
 echo "-----------------------------------------------------------"
 echo ""

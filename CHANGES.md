@@ -14,3 +14,6 @@
 - Fix: apply_settings() now echoes success/failure to stdout so errors
   (e.g. missing smbd PID file) are visible in the webGUI's progress frame
   instead of only being logged to syslog.
+- Change: Use SHA256 instead of MD5 for package integrity verification.
+- Fork: Rebranded plugin manifest (author, gitURL, supportURL) to point at
+  the maintained fork instead of the removed upstream repository.
