@@ -20,6 +20,9 @@
 		min="6.9.0">
 
 <CHANGES>
+###2026.08.25
+- Fix: Surface apply_settings() success/failure to the GUI instead of failing silently.
+
 ###2026.08.24
 - Fix: Per-file TDB backup retention instead of global retention.
 - Fix: Atomic staging for TDB backup and restore to avoid partial-write corruption.

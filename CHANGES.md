@@ -11,3 +11,6 @@
 - Fix: Validate TDB integrity with `tdbtool check` before restoring; fall
   back to the next-older generation if the newest fails validation, and
   skip restoration for a database entirely if no generation validates.
+- Fix: apply_settings() now echoes success/failure to stdout so errors
+  (e.g. missing smbd PID file) are visible in the webGUI's progress frame
+  instead of only being logged to syslog.
