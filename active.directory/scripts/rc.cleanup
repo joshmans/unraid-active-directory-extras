@@ -1,0 +1,34 @@
+#!/bin/bash
+# Custom cleanup script for TDB backups
+
+# Define the persistent storage directory
+TDB_BACKUP_DIR="/boot/config/plugins/active.directory/database"
+
+# Define the number of most recent backups to keep
+KEEP_COUNT=5
+
+# Perform cleanup
+if [ -d "$TDB_BACKUP_DIR" ]; then
+    echo "Cleaning up old TDB backups in $TDB_BACKUP_DIR..."
+
+    # Find and sort TDB files by modification time, oldest first
+    backups=($(ls -1t "$TDB_BACKUP_DIR"/*.tdb 2>/dev/null))
+    
+    # Check if there are more files than we want to keep
+    if [ ${#backups[@]} -gt $KEEP_COUNT ]; then
+        # Calculate the number of files to delete
+        DELETE_COUNT=$((${#backups[@]} - $KEEP_COUNT))
+
+        # Delete the oldest files
+        for ((i=KEEP_COUNT; i<${#backups[@]}; i++)); do
+            echo "Removing old backup: ${backups[i]}"
+            rm -f "${backups[i]}"
+        done
+    else
+        echo "No backups to clean up. Total backups: ${#backups[@]}"
+    fi
+else
+    echo "Warning: Backup directory $TDB_BACKUP_DIR does not exist."
+fi
+
+exit 0

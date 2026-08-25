@@ -1,0 +1,17 @@
+#!/bin/bash
+# Custom shutdown script for copying TDB databases
+
+# Define source and destination directories
+TDB_SOURCE="/var/lib/samba"
+TDB_DEST="/boot/config/plugins/active.directory/database"
+
+# Copy TDB files to persistent storage
+if [ -d "$TDB_SOURCE" ]; then
+    echo "Copying TDB files to persistent storage..."
+    cp -u "$TDB_SOURCE"/*.tdb "$TDB_DEST"
+    echo "TDB files copied to $TDB_DEST."
+else
+    echo "Warning: TDB source directory $TDB_SOURCE does not exist."
+fi
+
+exit 0

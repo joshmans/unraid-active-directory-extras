@@ -1,0 +1,231 @@
+#!/bin/bash
+# Usage:
+# apply|backend|range|cache_time|idmap_cache|idmap_neg_cache.
+#
+
+apply_settings()
+{
+	# Helper function to append a line to the configuration file
+	append_conf() {
+		echo "$1" >> /etc/samba/smb-active.directory.conf
+	}
+
+	# Clear the active.directory conf file
+	> /etc/samba/smb-active.directory.conf
+
+	# Configuration settings as an array of strings
+	config_entries=(
+		"idmap config DOMAIN : backend = $IDMAP_DOMAIN_BACKEND"
+		"idmap config DOMAIN : range = $IDMAP_DOMAIN_RANGE"
+		"idmap config * : backend = $IDMAP_BACKEND"
+		"idmap config * : range = $IDMAP_RANGE"
+		"idmap cache time = $IDMAP_CACHE_TIME"
+		"idmap negative cache time = $IDMAP_NEGATIVE_CACHE_TIME"
+		"winbind cache time = $WINBIND_CACHE_TIME"
+		"map acl inherit = yes"
+		"store dos attributes = yes"
+	)
+
+	# Append all configuration entries
+	for entry in "${config_entries[@]}"; do
+		append_conf "$entry"
+	done
+
+	# Set vfs objects = acl_xattr on all shares
+	$DOCROOT/plugins/active.directory/scripts/config_vfs
+
+	# Reload samba parameters, ensuring PID file exists
+	pid_file='/var/run/smbd.pid'
+	if [ -f "$pid_file" ]; then
+		smb_pid=$(cat "$pid_file")
+		/usr/bin/smbcontrol "$smb_pid" reload-config 2>&1
+	else
+		logger "Error: smbd PID file not found." -t$PROG_NAME
+		return 1
+	fi
+
+	# Log application of settings
+	logger "Active Directory Settings Applied" -t$PROG_NAME
+}
+
+
+clear_winbind_cache()
+{
+	# Clear net cache
+	/usr/bin/net cache flush
+
+	# Configure shares for vfs act_xattr
+	$DOCROOT/plugins/active.directory/scripts/config_vfs
+
+	# Restart samba
+	sleep 1
+	/etc/rc.d/rc.samba restart &>/dev/null
+
+	logger "Winbind cache cleared" -t$PROG_NAME
+}
+
+get_domain_backend()
+{
+	value=`/usr/bin/testparm -vs 2>/dev/null | tr '*' ' ' | /usr/bin/grep 'idmap config domain' | /usr/bin/grep 'backend' | /bin/awk '{print $7}'`
+	echo "$value"
+}
+
+get_domain_range()
+{
+	value=`/usr/bin/testparm -vs 2>/dev/null | tr '*' ' ' | /usr/bin/grep 'idmap config domain' | /usr/bin/grep 'range' | /bin/awk '{print $7}'`
+	echo "$value"
+}
+
+get_backend()
+{
+	value=`/usr/bin/testparm -vs 2>/dev/null | tr '*' ' ' | /usr/bin/grep 'idmap config *' | /usr/bin/grep 'backend' | /bin/awk '{print $6}'`
+	echo "$value"
+}
+
+get_range()
+{
+	value=`/usr/bin/testparm -vs 2>/dev/null | tr '*' ' ' | /usr/bin/grep 'idmap config *' | /usr/bin/grep 'range' | /bin/awk '{print $6}'`
+	echo "$value"
+}
+
+get_winbind_cache_time()
+{
+	value=`/usr/bin/testparm -vs 2>/dev/null | /usr/bin/grep 'winbind cache time' | /bin/awk '{print $5}'`
+	if [ "$value" = "" ]; then
+		echo "default"
+	else
+		case "$value" in
+			15)
+				echo "15 seconds"
+				;;
+			60)
+				echo "1 minute"
+				;;
+			300)
+				echo "5 minutes"
+				;;
+			3600)
+				echo "1 hour"
+				;;
+			*)
+				echo "$value seconds"
+				;;
+		esac
+	fi
+}
+
+get_idmap_cache_time()
+{
+	value=$(/usr/bin/testparm -s 2>/dev/null | /usr/bin/grep 'idmap cache time' | /bin/awk '{print $5}')
+
+	if [ "$value" = "" ]; then
+		echo "default"
+	else
+		case "$value" in
+			3600)
+				echo "1 hour"
+				;;
+			43200)
+				echo "12 hours"
+				;;
+			86400)
+				echo "24 hours"
+				;;
+			*)
+				echo "$value seconds"
+				;;
+		esac
+	fi
+}
+
+get_idmap_neg_cache_time()
+{
+	value=`/usr/bin/testparm -sv 2>/dev/null | /usr/bin/grep 'idmap negative cache time' | /bin/awk '{print $6}'`
+	if [ "$value" = "" ]; then
+		echo "default"
+	else
+		case "$value" in
+			60)
+				echo "1 minute"
+				;;
+			300)
+				echo "5 minutes"
+				;;
+			900)
+				echo "15 minutes"
+				;;
+			*)
+				echo "$value seconds"
+				;;
+		esac
+	fi
+}
+
+DOCROOT=`/usr/bin/grep -Po '^chdir = \K.*' /etc/php-fpm.d/www.conf`
+if [ -z ${DOCROOT} ];then
+	DOCROOT="/usr/local/emhttp"
+fi
+
+# read our configuration.
+plugin="active.directory"
+CONFIG="/boot/config/plugins/${plugin}/${plugin}.cfg"
+source $CONFIG
+
+# Set default IDMAP_DOMAIN_RANGE if blank in settings
+if [ "$IDMAP_DOMAIN_RANGE" = "" ]; then
+	IDMAP_DOMAIN_RANGE="100000-199999"
+fi
+
+# Set default IDMAP_RANGE if blank in settings
+if [ "$IDMAP_RANGE" = "" ]; then
+	IDMAP_RANGE="10000-99999"
+fi
+
+# Set default IDMAP_CACHE_TIME if blank in settings
+if [ "$IDMAP_CACHE_TIME" = "" ]; then
+	IDMAP_CACHE_TIME="43200"
+fi
+
+# Set default IDMAP_NEGATIVE_CACHE_TIME if blank in settings
+if [ "$IDMAP_NEGATIVE_CACHE_TIME" = "" ]; then
+	IDMAP_NEGATIVE_CACHE_TIME="300"
+fi
+
+# Set default WINBIND_CACHE_TIME if blank in settings
+if [ "$WINBIND_CACHE_TIME" = "" ]; then
+	WINBIND_CACHE_TIME="300"
+fi
+
+PROG_NAME=${plugin}
+
+case "$1" in
+	'apply')
+		apply_settings 
+	;;
+	'clear_cache')
+		clear_winbind_cache 
+	;;
+	'domain_backend')
+		get_domain_backend
+	;;
+	'domain_range')
+		get_domain_range
+	;;
+	'backend')
+		get_backend
+	;;
+	'range')
+		get_range
+	;;
+	'winbind_cache')
+		get_winbind_cache_time
+	;;
+	'idmap_cache')
+		get_idmap_cache_time
+	;;
+	'idmap_neg_cache')
+		get_idmap_neg_cache_time
+	;;
+	*)
+		echo "usage $0 apply|clear_cache|domain_backend|domain_range|backend|range|winbind_cache|idmap_cache|idmap_neg_cache"
+esac

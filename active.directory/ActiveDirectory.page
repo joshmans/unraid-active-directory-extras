@@ -1,0 +1,169 @@
+Menu="SMB:4"
+Title="Active Directory Extras"
+Tag="fa-share-alt-square"
+Cond="($var['shareSMBEnabled'] == 'ads')"
+---
+<?PHP
+/* Copyright 2023-2025, Dan Landon.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License version 2,
+ * as published by the Free Software Foundation.
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ */
+?>
+
+<?
+/* Define our plugin name. */
+define('ACTIVE_DIRECTORY_PLUGIN', 'active.directory');
+
+/* Define the docroot path. */
+if (!defined('DOCROOT')) {
+	define('DOCROOT', $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp');
+}
+
+$translations = file_exists(DOCROOT."/webGui/include/Translations.php");
+?>
+<?if (!$translations):?>
+<?eval('?>'.parse_file(DOCROOT."/plugins/".ACTIVE_DIRECTORY_PLUGIN."/ActiveDirectory"))?>
+<?else:?>
+<?
+$active_directory_cfg	= parse_plugin_cfg(ACTIVE_DIRECTORY_PLUGIN);
+
+$idmap_domain_backend	= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory domain_backend" );
+$idmap_domain_range		= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory domain_range" );
+$idmap_backend			= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory backend" );
+$idmap_range			= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory range" );
+$idmap_cache_time		= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory idmap_cache" );
+$idmap_neg_cache_time	= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory idmap_neg_cache" );
+$winbind_cache_time		= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory winbind_cache" );
+?>
+
+<div class='pluginUpdate'></div>
+
+<script>
+	$(function() {
+		if ( typeof caPluginUpdateCheck === "function" ) {
+			caPluginUpdateCheck("active.directory.plg",{element:".pluginUpdate"});
+		}
+	});
+</script>
+
+<table class="tablesorter shift ups">
+<thead><tr><th>_(Active DIrectory Extras)_</th></tr></thead>
+</table>
+
+<div style="width: 90%; float:left">
+	<p>
+	_(When you change a backend database, you will lose your permission settings and you'll have to re-enter them)_.  _(AD permissions are persistent after a reboot)_.
+	</p>
+</div>
+
+<div style="width: 75%; float:left">
+<form markdown="1" name="active_directory" method="POST" action="/update.php" target="progressFrame">
+<input type="hidden" name="#file" value="active.directory/active.directory.cfg">
+<input type="hidden" name="#command" value="/plugins/active.directory/scripts/rc.active.directory">
+<input type="hidden" name="#arg[1]" value="apply">
+
+_(Domain Backend Database)_
+: <select name="IDMAP_DOMAIN_BACKEND" size="1">
+	<?=mk_option($active_directory_cfg['IDMAP_DOMAIN_BACKEND'], "rid", "rid");?>
+	<?=mk_option($active_directory_cfg['IDMAP_DOMAIN_BACKEND'], "ad", "ad");?>
+	<?=mk_option($active_directory_cfg['IDMAP_DOMAIN_BACKEND'], "tdb", "tdb");?>
+  </select>
+
+:active_directory_domain_backend_database_plug:
+> The Domain Backend Database determines how Samba maps Active Directory (AD) Security Identifiers (SIDs) to Linux User IDs (UIDs) and Group IDs (GIDs). This mapping is critical for assigning file ownership and permissions in a Linux environment.
+:end
+
+_(Domain Backend Range)_:
+: <input type="text" name="IDMAP_DOMAIN_RANGE" class="narrow" maxlength="20" value="<?=htmlspecialchars($active_directory_cfg['IDMAP_DOMAIN_RANGE']);?>" placeholder="100000-999999" disabled>
+
+:active_directory_domain_backend_range_plug:
+> The Domain Backend Range defines the range of Liinux User IDs (UIDs) and Group IDs (GIDs) used by Samba to map Active Directory (AD) Security Identifiers (SIDs). This range ensures that the IDs assigned to AD users and groups do not conflict with other system accounts.
+:end
+
+_(Backend Database)_
+: <select name="IDMAP_BACKEND" size="1">
+	<?=mk_option($active_directory_cfg['IDMAP_BACKEND'], "tdb", "tdb");?>
+	<?=mk_option($active_directory_cfg['IDMAP_BACKEND'], "ldap", "ldap");?>
+  </select>
+
+:active_directory_backend_database_plug:
+> The Backend Database specifies the storage mechanism Samba uses to map Active Directory (AD) Security Identifiers (SIDs) to Linux User IDs (UIDs) and Group IDs (GIDs). These mappings are essential for consistent file ownership and permission management in AD-integrated Samba environments.
+:end
+
+_(Backend Range)_:
+: <input type="text" name="IDMAP_RANGE" class="narrow" maxlength="20" value="<?=htmlspecialchars($active_directory_cfg['IDMAP_RANGE']);?>" placeholder="10000-99999" disabled>
+
+:active_directory_backend_database_range_plug:
+> The Backend Range defines the range of Linux User IDs (UIDs) and Group IDs (GIDs) allocated for a specific backend. This ensures that each mapping backend (e.g., rid, tdb, ad) operates within a defined range, preventing conflicts with other mappings or local system accounts.
+:end
+
+_(Idmap Cache Time)_:
+: <select name="IDMAP_CACHE_TIME" size="1">
+	<?=mk_option($active_directory_cfg['IDMAP_CACHE_TIME'], "3600", "1 hour");?>
+	<?=mk_option($active_directory_cfg['IDMAP_CACHE_TIME'], "43200", "12 hours");?>
+	<?=mk_option($active_directory_cfg['IDMAP_CACHE_TIME'], "86400", "24 hours");?>
+  </select>
+
+:active_directory_idmap_cache_time_plug:
+> This parameter specifies the time that Winbind's idmap interface will cache positive SID/uid/gid query results.
+:end
+
+_(Idmap Negative Cache Time)_:
+: <select name="IDMAP_NEGATIVE_CACHE_TIME" size="1">
+	<?=mk_option($active_directory_cfg['IDMAP_NEGATIVE_CACHE_TIME'], "60", "1 minute");?>
+	<?=mk_option($active_directory_cfg['IDMAP_NEGATIVE_CACHE_TIME'], "300", "5 minutes");?>
+	<?=mk_option($active_directory_cfg['IDMAP_NEGATIVE_CACHE_TIME'], "900", "15 minutes");?>
+  </select>
+
+:active_directory_idmap_negativecache_time_plug:
+> This parameter specifies the time that Winbind's idmap interface will cache negative SID/uid/gid query results.
+:end
+
+_(Winbind Cache Time)_:
+: <select name="WINBIND_CACHE_TIME" size="1">
+	<?=mk_option($active_directory_cfg['WINBIND_CACHE_TIME'], "15", "15 seconds");?>
+	<?=mk_option($active_directory_cfg['WINBIND_CACHE_TIME'], "60", "1 minute");?>
+	<?=mk_option($active_directory_cfg['WINBIND_CACHE_TIME'], "300", "5 minutes");?>
+	<?=mk_option($active_directory_cfg['WINBIND_CACHE_TIME'], "3600", "1 hour");?>
+  </select>
+
+:active_directory_winbind_cache_time_plug:
+> This parameter specifies the time the winbindd daemon will cache user and group information before querying a Windows NT server again.
+>
+> This does not apply to authentication requests, these are always evaluated in real time unless the winbind offline logon option has been enabled.
+:end
+
+<input type="submit" name="#default" value="_(Default)_">
+: <input type="submit" name="#apply" value="_(Apply)_"><input type="button" value="_(Done)_" onclick="done()">
+<u><a href='https://www.samba.org/~ab/output/htmldocs/Samba3-HOWTO/idmapper.html', target='_blank'>Samba idmap documentation</a></u>
+</form>
+
+<form name="clear_winbind_cache" method="POST" action="/update.php" target="progressFrame">
+	<input type="hidden" name="#command" value="/plugins/active.directory/scripts/rc.active.directory">
+	<input type="hidden" name="#arg[1]" value="clear_cache">
+	<input type="submit" id="clear_cache" value="_(Clear Cache)_" title="_(Clear winbind cache and restart Samba)_.">
+</form>
+
+<p>
+_(Click on 'Help' for more information)_.
+</p>
+</div>
+
+<div>
+	<div style="width: 25%; float:right">
+		<p><u>_(Current AD Settings)_</u></p>
+		<p>_(Domain Backend Database)_: <?=$idmap_domain_backend?></p>
+		<p>_(Domain Backend Range)_: <?=$idmap_domain_range?></p>
+		<p>_(Backend Database)_: <?=$idmap_backend?></p>
+		<p>_(Backend Range)_: <?=$idmap_range?></p>
+		<p>_(Idmap Cache Time)_: <?=$idmap_cache_time?></p>
+		<p>_(Idmap Negative Cache Time)_: <?=$idmap_neg_cache_time?></p>
+		<p>_(Winbind Cache Time)_: <?=$winbind_cache_time?></p>
+	</div>
+</div>
+<?endif;?>

@@ -1,0 +1,35 @@
+#!/bin/bash
+# Custom startup script for restoring TDB databases
+
+# Define source and destination directories
+TDB_SOURCE="/boot/config/plugins/active.directory/database"
+TDB_DEST="/var/lib/samba"
+
+# Restore TDB files from persistent storage
+if [ -d "$TDB_SOURCE" ]; then
+    # Check if there are TDB files to restore
+    tdb_files=("$TDB_SOURCE"/*.tdb)
+    if [ -e "${tdb_files[0]}" ]; then
+		# Stop samba
+		/etc/rc.d/rc.samba stop &>/dev/null
+
+        echo "Restoring TDB files from persistent storage..."
+        cp -u "$TDB_SOURCE"/*.tdb "$TDB_DEST"
+
+        # Restore ownership and permissions
+        echo "Restoring permissions..."
+        chown -R root:root "$TDB_DEST"
+        chmod -R 600 "$TDB_DEST"/*.tdb
+
+		# Start samba
+		/etc/rc.d/rc.samba start &>/dev/null
+
+        echo "TDB files restored to $TDB_DEST."
+    else
+        echo "No TDB files found in $TDB_SOURCE. Skipping restoration."
+    fi
+else
+    echo "Warning: TDB source directory $TDB_SOURCE does not exist."
+fi
+
+exit 0

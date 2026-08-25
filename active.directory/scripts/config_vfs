@@ -1,0 +1,63 @@
+#!/usr/bin/php
+<?php
+	/* Shares config file. */
+	$smb_file = "/etc/samba/smb-shares.conf";
+
+	/* Parse the samba config file. */
+	$smb_config = parse_ini_file($smb_file, true, INI_SCANNER_RAW);
+
+	/* Get all shares from the smb configuration file. */
+	$smb_shares = array_keys($smb_config);
+
+	/* vfs acl_xattr  object. */
+	$acl_xattr = "acl_xattr";
+
+	/* Go through each share and add the acl_xattr. */
+	foreach ($smb_shares as $s) {
+		if (($s != "global") && ($s != "flash")) {
+			if (isset($smb_config[$s]['vfs objects'])) {
+				/* Remove all occurrences of $acl_xattr from the vfs objects string */
+				$smb_config[$s]['vfs objects'] = str_replace($acl_xattr, '', $smb_config[$s]['vfs objects']);
+
+				/* Trim the result to clean up any extra spaces left after removal */
+				$smb_config[$s]['vfs objects'] = trim($smb_config[$s]['vfs objects']);
+
+				/* Add the acl_xattr. */
+				$smb_config[$s]['vfs objects'] .= " ".$acl_xattr;
+			} else {
+				/* Add the vfs objects = acl_xattr. */
+				$smb_config[$s]['vfs objects'] = $acl_xattr;
+			}
+		}
+	}
+
+	/* Rewrite the configuration file. */
+	$keys		= array_keys($smb_config);
+	$iniFile	= "";
+	$first_line	= true;
+	foreach ($keys as $key) {
+		if ($first_line) {
+			$iniFile .= "[$key]";
+			$first_line	= false;
+		} else {
+			$iniFile .= "\n[$key]";
+		}
+		$entryKeys = array_keys($smb_config[$key]);
+		foreach ($entryKeys as $entry) {
+			$iniFile .= "\n\t".$entry.' = '.$smb_config[$key][$entry];
+		}
+
+		/* If rewritting unassigned devices share add final line break. */
+		if ($key == "global") {
+			$iniFile	.= "\n";
+		}
+	}
+
+	/* Add final line break. */
+	$iniFile	.= "\n";
+
+	/* Write the new configuration. */
+	if ($iniFile) {
+		file_put_contents($smb_file, $iniFile);
+	}
+?>

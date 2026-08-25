@@ -1,0 +1,201 @@
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+<!ENTITY name		"active.directory">
+<!ENTITY author		"dlandon">
+<!ENTITY version	"2025.02.19">
+<!ENTITY launch		"Settings/SMB">
+<!ENTITY gitURL		"https://raw.githubusercontent.com/&author;/&name;/master">
+<!ENTITY pluginURL	"&gitURL;/&name;.plg">
+<!ENTITY supportURL	"https://forums.unraid.net/topic/137467-active-directory-extras-plugin-allows-tweaking-some-ad-settings-in-samba/#comment-1248698">
+<!ENTITY MD5		"bb73caab7ca0223f378816b2eceb4820">
+]>
+
+<PLUGIN	name="&name;"
+		author="&author;"
+		version="&version;"
+		launch="&launch;"
+		pluginURL="&pluginURL;"
+		support="&supportURL;"
+		icon="fa-share-alt-square"
+		min="6.9.0">
+
+<CHANGES>
+##&name;
+###&version;
+- Fix: Don't check for AD being enabled on startup or shutdown.
+
+###2025.01.29
+- Fix: Undefined file error.
+
+###2025.01.18
+- Fix: Undefined variable error.
+
+###2024.01.15
+- Fix: Restart Samba when restoring databases.
+
+###2025.01.09a
+- Fix: Some code changes for reliability and robustness.
+- Add: Set permissions when restoring the databases.
+
+###2024.12.28
+- Fix: AD Extras page not showing when AD enabled.
+
+###2024.12.27a
+- Fix: Change some php variables to constants that don't need to be variables.
+- Add: Database files are stored on the flash drive, so they will be persistent.
+- Add: Database files are backuped up to the /flash when Unraid is shut down.
+- Add: Database files are restored from the /flash on Unraid startup.
+- Add: Database cleanup is performed on shutdown to limit backups to 5.
+
+###2024.08.08
+- Fix: In certain cases "vfs objects" gets set to "vfs objects = vfs objects = acl_xattr".
+
+###2024.05.12
+- Add: Don't apply AD settings if AD is not selected in SMB.
+
+###2024.04.30
+- Fix: Some code cleanup.
+- Add: Disable 'Active Directory Extras' page when AD not selected in SMB.
+
+###2024.04.28
+- Add: Samba settings: 'map acl inherit = yes', and 'store dos attributes = yes' to global settings.
+- Add: Samba settings: 'vfs objects = acl_xattr' to every share.
+
+###2023.07.08
+- Add: Show default values for 'winbind cache time' and 'idmap cache time' if values are not explicitly set.
+- Add: Clear Cache button to clear the winbind cache and restart Samba.
+
+###2023.07.07a
+- Fix: Add icon to settings tab.
+- Fix: Plugin not showing correctly on plugins page.
+- Add: Submit to CA.
+
+###2023.04.07
+- Fix: Set lowest Unraid version 6.9.0.
+
+###2023.04.06
+- Add: Plugin update detection.
+- Add: 'idmap negative cache time' setting.
+
+###2023.04.05
+- Initial Unraid V6.11.5 release.
+</CHANGES>
+
+<!--
+Copyright 2023-2024, Dan Landon
+This plugin lets you set some Active Directory settings.
+-->
+
+<!--
+Get the plugin bundle.
+-->
+<FILE Name="/boot/config/plugins/&name;/&name;-&version;.tgz">
+<URL>"&gitURL;/&name;-&version;.tgz"</URL>
+<MD5>&MD5;</MD5>
+</FILE>
+
+<!--
+The 'pre-install' script.
+-->
+<FILE Run="/bin/bash">
+<INLINE>
+# Remove emhttp files so we can re-install.
+rm -rf /usr/local/emhttp/plugins/&name;/* 2>/dev/null
+
+# Remove old 'bundle' files.
+rm -f $(ls /boot/config/plugins/&name;/&name;*.tgz 2>/dev/null | grep -v '&version;')
+
+# Remove old add-smb file
+rm -f /tmp/&name;/add-smb
+</INLINE>
+</FILE>
+
+<!--
+Install the plugin bundle.
+-->
+<FILE Run="/bin/bash">
+<INLINE>
+# Create plugin directories
+mkdir -p /boot/config/plugins/&name; /boot/config/plugins/&name;/database 2>/dev/null
+
+# Install the 'bundle'.
+tar -xf /boot/config/plugins/&name;/&name;-&version;.tgz -C /usr/local/emhttp/plugins 2>/dev/null
+
+# Fix permissions of executable files
+chmod +x /usr/local/emhttp/plugins/&name;/scripts/* /usr/local/emhttp/plugins/&name;/event/*
+
+# Apply the settings
+/usr/local/emhttp/plugins/&name;/scripts/rc.active.directory apply
+</INLINE>
+</FILE>
+
+<FILE Name="/boot/config/plugins/&name;/&name;.cfg">
+<INLINE>
+<![CDATA[
+IDMAP_DOMAIN_BACKEND="rid"
+IDMAP_DOMAIN_RANGE=""
+IDMAP_BACKEND="tdb"
+IDMAP_RANGE=""
+IDMAP_CACHE_TIME="43200"
+IDMAP_NEGATIVE_CACHE_TIME="300"
+WINBIND_CACHE_TIME="300"
+]]>
+</INLINE>
+</FILE>
+
+<!--
+Add smb parameters for AD.
+-->
+<FILE Name="/tmp/&name;/add-smb" Mode="0770">
+<INLINE>
+<![CDATA[
+#!/bin/bash
+# Add entry to /etc/samba/smb.conf
+if [[ `grep '# hook for active directory' /etc/samba/smb.conf` = "" ]]; then
+	sed -i "/# auto-configured shares/i \[global]\n	# hook for active directory\n	include = /etc/samba/smb-active.directory.conf\n" /etc/samba/smb.conf
+	/usr/bin/smbcontrol $(/usr/bin/cat /var/run/smbd.pid 2>/dev/null) reload-config 2>&1
+fi
+]]>
+</INLINE>
+</FILE>
+
+<!--
+The 'post-install' script.
+-->
+<FILE Run="/bin/bash">
+<INLINE>
+# Add active directory settings to smb.conf.
+at -M -f /tmp/&name;/add-smb now 2>/dev/null
+
+
+echo ""
+echo "-----------------------------------------------------------"
+echo " &name; is installed."
+echo " Copyright 2025 &author;"
+echo " Version: &version;"
+echo "-----------------------------------------------------------"
+echo ""
+</INLINE>
+</FILE>
+
+<!--
+The 'remove' script.
+-->
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
+# Remove all plugin files.
+rm -rf /usr/local/emhttp/plugins/&name; 2>/dev/null
+
+# Remove the active directory 'bundle' so it will be downloaded if re-installed.
+rm -rf /boot/config/plugins/&name;/&name;-&version;.tgz
+
+echo ""
+echo "-----------------------------------------------------------"
+echo " &name; has been removed."
+echo " Version: &version;"
+echo "-----------------------------------------------------------"
+echo ""
+</INLINE>
+</FILE>
+
+</PLUGIN>
