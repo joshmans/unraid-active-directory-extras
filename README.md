@@ -45,7 +45,7 @@ All original copyright and license terms are preserved below and in
 
 1. In Unraid, go to **Plugins → Install Plugin** and paste:
    ```
-   https://raw.githubusercontent.com/<YOUR_GH_USER>/<YOUR_REPO>/master/active.directory.plg
+   https://raw.githubusercontent.com/joshmans/unraid-active-directory-extras/master/active.directory.plg
    ```
 2. Or search for it by name in the **Apps** tab once it's listed in
    Community Applications.
