@@ -52,9 +52,8 @@ All original copyright and license terms are preserved below and in
 
 ## Compatibility
 
-- Minimum Unraid version: 6.9.0 (inherited from upstream; re-verify against
-  current 7.x before raising this)
-- Tested on: **[FILL IN — list the Unraid versions you've actually tested]**
+- Minimum Unraid version: 6.9.x
+- Tested up to version: 7.3.2
 
 ## Changelog
 
@@ -72,10 +71,8 @@ scripts and `php -l` against any PHP before submitting.
 GPLv2, same as upstream. See [`LICENSE.md`](./LICENSE.md).
 
 Original copyright (C) 2023–2025 Dan Landon.
-Fork maintenance copyright (C) 2026 **[YOUR NAME / HANDLE]**.
+Fork maintenance copyright (C) 2026 Josh Mans
 
 ## Support
 
-Open an issue on this repository, or post in the
-**[FILL IN — link to your new forum support thread once created]**
-support thread on the Unraid forums.
+Open an issue on this repository
