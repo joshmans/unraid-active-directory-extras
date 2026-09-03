@@ -115,7 +115,6 @@ _(Domain Backend Range)_:
 _(Backend Database)_
 : <select name="IDMAP_BACKEND" size="1">
 	<?=mk_option($active_directory_cfg['IDMAP_BACKEND'], "tdb", "tdb");?>
-	<?=mk_option($active_directory_cfg['IDMAP_BACKEND'], "ldap", "ldap");?>
   </select>
 
 :active_directory_backend_database_plug:

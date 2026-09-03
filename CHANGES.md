@@ -22,3 +22,4 @@
   status with expandable diagnostic detail on failure.
 - Add: Confirmation dialog before Clear Cache, since clearing the cache
   restarts Samba and drops any active SMB connections.
+- Change: Remove incomplete LDAP option from Backend Database dropdown.
