@@ -163,6 +163,28 @@ get_idmap_neg_cache_time()
 	fi
 }
 
+get_join_status()
+{
+	# Live AD join status, replacing Unraid's own built-in indicator
+	# (frequently inaccurate - see AI_REFACTOR_BRIEF.md, enhancement #3).
+	# Uses the exit code of 'net ads testjoin' as the source of truth
+	# rather than parsing its stdout text, since the success string
+	# ("Join is OK") is stable but failure text varies by failure mode -
+	# the exit code is the documented, reliable signal either way.
+	#
+	# Output is "STATUS|DETAIL" (pipe-delimited) so the page can style
+	# the status word and show the raw diagnostic text separately,
+	# rather than always dumping the raw error text inline.
+	testjoin_output=`/usr/bin/net ads testjoin 2>&1`
+	testjoin_status=$?
+
+	if [ $testjoin_status -eq 0 ]; then
+		echo "Joined|"
+	else
+		echo "Not joined|$testjoin_output"
+	fi
+}
+
 DOCROOT=`/usr/bin/grep -Po '^chdir = \K.*' /etc/php-fpm.d/www.conf`
 if [ -z ${DOCROOT} ];then
 	DOCROOT="/usr/local/emhttp"
@@ -228,6 +250,9 @@ case "$1" in
 	'idmap_neg_cache')
 		get_idmap_neg_cache_time
 	;;
+	'join_status')
+		get_join_status
+	;;
 	*)
-		echo "usage $0 apply|clear_cache|domain_backend|domain_range|backend|range|winbind_cache|idmap_cache|idmap_neg_cache"
+		echo "usage $0 apply|clear_cache|domain_backend|domain_range|backend|range|winbind_cache|idmap_cache|idmap_neg_cache|join_status"
 esac

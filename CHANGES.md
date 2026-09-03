@@ -17,3 +17,6 @@
 - Change: Use SHA256 instead of MD5 for package integrity verification.
 - Fork: Rebranded plugin manifest (author, gitURL, supportURL) to point at
   the maintained fork instead of the removed upstream repository.
+- Add: Live AD join status via `net ads testjoin`, replacing Unraid's
+  built-in indicator (frequently inaccurate). Shows a color-coded
+  status with expandable diagnostic detail on failure.
