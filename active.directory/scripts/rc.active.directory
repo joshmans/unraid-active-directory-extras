@@ -3,8 +3,63 @@
 # apply|backend|range|cache_time|idmap_cache|idmap_neg_cache.
 #
 
+validate_range()
+{
+	# Validates a "low-high" range string (enhancement #2 - see
+	# AI_REFACTOR_BRIEF.md section 5). Returns 0 if the format is correct
+	# and low < high, 1 otherwise. This is the authoritative check - the
+	# page's JS validation is a convenience only, since a request could
+	# always be POSTed directly to update.php bypassing the browser.
+	local range="$1"
+	if [[ ! "$range" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+		return 1
+	fi
+	local low="${BASH_REMATCH[1]}"
+	local high="${BASH_REMATCH[2]}"
+	if [ "$low" -ge "$high" ]; then
+		return 1
+	fi
+	return 0
+}
+
+ranges_overlap()
+{
+	# $1 and $2 are "low-high" strings already confirmed valid by
+	# validate_range. Returns 0 (true) if they overlap, 1 (false) if not.
+	local low1 high1 low2 high2
+	IFS='-' read -r low1 high1 <<< "$1"
+	IFS='-' read -r low2 high2 <<< "$2"
+	if [ "$low1" -le "$high2" ] && [ "$low2" -le "$high1" ]; then
+		return 0
+	fi
+	return 1
+}
+
 apply_settings()
 {
+	# Validate the Domain Backend Range and Backend Range before writing
+	# anything. Uses the same echo-to-stdout pattern as the PID-file
+	# check below (see AI_REFACTOR_BRIEF.md section 4, bug #4) so an
+	# invalid range shows up in the webGUI's progress frame instead of
+	# failing silently.
+	if ! validate_range "$IDMAP_DOMAIN_RANGE"; then
+		logger "Error: invalid IDMAP_DOMAIN_RANGE '$IDMAP_DOMAIN_RANGE'." -t$PROG_NAME
+		echo "Error: Domain Backend Range '$IDMAP_DOMAIN_RANGE' is invalid. Expected format: low-high (e.g. 100000-199999), with low less than high. Settings were not applied."
+		return 1
+	fi
+
+	if ! validate_range "$IDMAP_RANGE"; then
+		logger "Error: invalid IDMAP_RANGE '$IDMAP_RANGE'." -t$PROG_NAME
+		echo "Error: Backend Range '$IDMAP_RANGE' is invalid. Expected format: low-high (e.g. 10000-99999), with low less than high. Settings were not applied."
+		return 1
+	fi
+
+	if ranges_overlap "$IDMAP_DOMAIN_RANGE" "$IDMAP_RANGE"; then
+		logger "Error: IDMAP_DOMAIN_RANGE and IDMAP_RANGE overlap." -t$PROG_NAME
+		echo "Error: Domain Backend Range ($IDMAP_DOMAIN_RANGE) and Backend Range ($IDMAP_RANGE) must not overlap. Settings were not applied."
+		return 1
+	fi
+
 	# Helper function to append a line to the configuration file
 	append_conf() {
 		echo "$1" >> /etc/samba/smb-active.directory.conf

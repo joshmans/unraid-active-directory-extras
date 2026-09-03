@@ -66,6 +66,51 @@ $join_is_ok				= ($join_state === 'Joined');
 			toggle.textContent = toggle.getAttribute('data-show-text');
 		}
 	}
+
+	function activeDirectoryExtras_parseRange(str) {
+		var m = str.match(/^(\d+)-(\d+)$/);
+		if (!m) {
+			return null;
+		}
+		var low = parseInt(m[1], 10);
+		var high = parseInt(m[2], 10);
+		if (low >= high) {
+			return null;
+		}
+		return { low: low, high: high };
+	}
+
+	function activeDirectoryExtras_rangesOverlap(a, b) {
+		return a.low <= b.high && b.low <= a.high;
+	}
+
+	function activeDirectoryExtras_validateRanges(button) {
+		// Convenience check only - the authoritative validation happens
+		// server-side in rc.active.directory's apply_settings(), since a
+		// request could always be POSTed directly to update.php bypassing
+		// this. See AI_REFACTOR_BRIEF.md, section 5, enhancement #2.
+		var domainField = document.getElementsByName('IDMAP_DOMAIN_RANGE')[0];
+		var rangeField = document.getElementsByName('IDMAP_RANGE')[0];
+
+		var domainRange = activeDirectoryExtras_parseRange(domainField.value.trim());
+		var range = activeDirectoryExtras_parseRange(rangeField.value.trim());
+
+		if (!domainRange) {
+			alert(button.getAttribute('data-err-domain-range'));
+			domainField.focus();
+			return false;
+		}
+		if (!range) {
+			alert(button.getAttribute('data-err-range'));
+			rangeField.focus();
+			return false;
+		}
+		if (activeDirectoryExtras_rangesOverlap(domainRange, range)) {
+			alert(button.getAttribute('data-err-overlap'));
+			return false;
+		}
+		return true;
+	}
 </script>
 
 <div style="width: 90%; float:left">
@@ -106,7 +151,7 @@ _(Domain Backend Database)_
 :end
 
 _(Domain Backend Range)_:
-: <input type="text" name="IDMAP_DOMAIN_RANGE" class="narrow" maxlength="20" value="<?=htmlspecialchars($active_directory_cfg['IDMAP_DOMAIN_RANGE']);?>" placeholder="100000-999999" disabled>
+: <input type="text" name="IDMAP_DOMAIN_RANGE" class="narrow" maxlength="20" value="<?=htmlspecialchars($active_directory_cfg['IDMAP_DOMAIN_RANGE']);?>" placeholder="100000-999999">
 
 :active_directory_domain_backend_range_plug:
 > The Domain Backend Range defines the range of Liinux User IDs (UIDs) and Group IDs (GIDs) used by Samba to map Active Directory (AD) Security Identifiers (SIDs). This range ensures that the IDs assigned to AD users and groups do not conflict with other system accounts.
@@ -122,7 +167,7 @@ _(Backend Database)_
 :end
 
 _(Backend Range)_:
-: <input type="text" name="IDMAP_RANGE" class="narrow" maxlength="20" value="<?=htmlspecialchars($active_directory_cfg['IDMAP_RANGE']);?>" placeholder="10000-99999" disabled>
+: <input type="text" name="IDMAP_RANGE" class="narrow" maxlength="20" value="<?=htmlspecialchars($active_directory_cfg['IDMAP_RANGE']);?>" placeholder="10000-99999">
 
 :active_directory_backend_database_range_plug:
 > The Backend Range defines the range of Linux User IDs (UIDs) and Group IDs (GIDs) allocated for a specific backend. This ensures that each mapping backend (e.g., rid, tdb, ad) operates within a defined range, preventing conflicts with other mappings or local system accounts.
@@ -165,7 +210,7 @@ _(Winbind Cache Time)_:
 :end
 
 <input type="submit" name="#default" value="_(Default)_">
-: <input type="submit" name="#apply" value="_(Apply)_"><input type="button" value="_(Done)_" onclick="done()">
+: <input type="submit" name="#apply" value="_(Apply)_" data-err-domain-range="_(Domain Backend Range must be in the format low-high, e.g. 100000-199999, with low less than high.)_" data-err-range="_(Backend Range must be in the format low-high, e.g. 10000-99999, with low less than high.)_" data-err-overlap="_(Domain Backend Range and Backend Range must not overlap.)_" onclick="return activeDirectoryExtras_validateRanges(this);"><input type="button" value="_(Done)_" onclick="done()">
 <u><a href='https://www.samba.org/~ab/output/htmldocs/Samba3-HOWTO/idmapper.html', target='_blank'>Samba idmap documentation</a></u>
 </form>
 

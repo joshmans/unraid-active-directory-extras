@@ -23,3 +23,8 @@
 - Add: Confirmation dialog before Clear Cache, since clearing the cache
   restarts Samba and drops any active SMB connections.
 - Change: Remove incomplete LDAP option from Backend Database dropdown.
+- Add: Enable and validate Domain Backend Range / Backend Range fields
+  (previously disabled placeholders). Validates format (low-high),
+  low < high, and that the two ranges don't overlap - both client-side
+  for immediate feedback and server-side in apply_settings() as the
+  authoritative check.
