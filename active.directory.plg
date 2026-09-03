@@ -21,6 +21,8 @@
 		min="6.9.0">
 
 <CHANGES>
+###2026.09.03
+- Add: Live AD join status via wbinfo/net ads testjoin, replacing the built-in indicator.
 ###2026.08.25a
 - Fork: Rebranded plugin manifest for community fork — updated author,
   gitURL, and supportURL to point at the maintained fork instead of the

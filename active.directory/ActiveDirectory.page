@@ -39,6 +39,11 @@ $idmap_range			= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.di
 $idmap_cache_time		= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory idmap_cache" );
 $idmap_neg_cache_time	= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory idmap_neg_cache" );
 $winbind_cache_time		= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory winbind_cache" );
+$join_status_raw		= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory join_status" );
+$join_status_parts		= explode('|', $join_status_raw, 2);
+$join_state				= $join_status_parts[0];
+$join_detail			= isset($join_status_parts[1]) ? $join_status_parts[1] : '';
+$join_is_ok				= ($join_state === 'Joined');
 ?>
 
 <div class='pluginUpdate'></div>
@@ -49,13 +54,35 @@ $winbind_cache_time		= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.act
 			caPluginUpdateCheck("active.directory.plg",{element:".pluginUpdate"});
 		}
 	});
+
+	function activeDirectoryExtras_toggleJoinDetail() {
+		var detail = document.getElementById('ad_join_detail');
+		var toggle = document.getElementById('ad_join_detail_toggle');
+		if (detail.style.display === 'none') {
+			detail.style.display = 'inline';
+			toggle.textContent = toggle.getAttribute('data-hide-text');
+		} else {
+			detail.style.display = 'none';
+			toggle.textContent = toggle.getAttribute('data-show-text');
+		}
+	}
 </script>
 
-<table class="tablesorter shift ups">
-<thead><tr><th>_(Active DIrectory Extras)_</th></tr></thead>
-</table>
-
 <div style="width: 90%; float:left">
+	<p>
+	<b>_(AD join status)_:</b>
+	<?if ($join_is_ok):?>
+		<i class="fa fa-check-circle" style="color:#5cb85c"></i>
+		<span style="color:#5cb85c">_(Joined)_</span>
+	<?else:?>
+		<i class="fa fa-times-circle" style="color:#d9534f"></i>
+		<span style="color:#d9534f">_(Not joined)_</span>
+		<?if ($join_detail !== ''):?>
+		<a href="#" id="ad_join_detail_toggle" data-show-text="_(show details)_" data-hide-text="_(hide details)_" onclick="activeDirectoryExtras_toggleJoinDetail(); return false;" style="font-size:0.85em; margin-left:8px;">_(show details)_</a>
+		<span id="ad_join_detail" style="display:none; font-size:0.85em; opacity:0.8; margin-left:6px;">&mdash; <?=htmlspecialchars($join_detail)?></span>
+		<?endif;?>
+	<?endif;?>
+	</p>
 	<p>
 	_(When you change a backend database, you will lose your permission settings and you'll have to re-enter them)_.  _(AD permissions are persistent after a reboot)_.
 	</p>
@@ -166,13 +193,10 @@ _(Click on 'Help' for more information)_.
 		<p>_(Winbind Cache Time)_: <?=$winbind_cache_time?></p>
 	</div>
 </div>
+
 <script>
-/* active.directory extras: hide Unraid's built-in "AD join status" row,
- * which is frequently inaccurate, in favor of our own status display
- * (see AI_REFACTOR_BRIEF.md, enhancement #3). Runs only on the SMB
- * settings page, and only while our own extras section is also visible
- * (Cond="($var['shareSMBEnabled'] == 'ads')" already gates that).
- */
+// active.directory extras: hides the built-in AD join status row (often
+// inaccurate) in favor of our own status display. See enhancement #3.
 (function activeDirectoryExtras_hideCoreJoinStatus() {
     function hideRow() {
         var form = document.querySelector('form[name="JoinOps"]');
