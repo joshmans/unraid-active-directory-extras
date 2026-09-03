@@ -173,7 +173,7 @@ _(Winbind Cache Time)_:
 <form name="clear_winbind_cache" method="POST" action="/update.php" target="progressFrame">
 	<input type="hidden" name="#command" value="/plugins/active.directory/scripts/rc.active.directory">
 	<input type="hidden" name="#arg[1]" value="clear_cache">
-	<input type="submit" id="clear_cache" value="_(Clear Cache)_" title="_(Clear winbind cache and restart Samba)_.">
+	<input type="submit" id="clear_cache" value="_(Clear Cache)_" title="_(Clear winbind cache and restart Samba)_." onclick="return confirm('_(Clearing the cache will restart Samba and drop any active SMB connections. Continue?)_');">
 </form>
 
 <p>

@@ -23,6 +23,8 @@
 <CHANGES>
 ###2026.09.03
 - Add: Live AD join status via wbinfo/net ads testjoin, replacing the built-in indicator.
+- Add: Confirmation dialog before Clear Cache, since clearing the cache
+  restarts Samba and drops any active SMB connections.
 ###2026.08.25a
 - Fork: Rebranded plugin manifest for community fork — updated author,
   gitURL, and supportURL to point at the maintained fork instead of the

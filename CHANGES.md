@@ -20,3 +20,5 @@
 - Add: Live AD join status via `net ads testjoin`, replacing Unraid's
   built-in indicator (frequently inaccurate). Shows a color-coded
   status with expandable diagnostic detail on failure.
+- Add: Confirmation dialog before Clear Cache, since clearing the cache
+  restarts Samba and drops any active SMB connections.
