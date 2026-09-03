@@ -1,6 +1,7 @@
 ### Active Directory plugin for unRAID
 
 Copyright (C) 2023 Dan Landon
+
 Continuing Copyright (C) 2026 Josh Mans
 
 This program is free software; you can redistribute it and/or modify
