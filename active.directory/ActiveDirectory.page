@@ -166,4 +166,51 @@ _(Click on 'Help' for more information)_.
 		<p>_(Winbind Cache Time)_: <?=$winbind_cache_time?></p>
 	</div>
 </div>
+<script>
+/* active.directory extras: hide Unraid's built-in "AD join status" row,
+ * which is frequently inaccurate, in favor of our own status display
+ * (see AI_REFACTOR_BRIEF.md, enhancement #3). Runs only on the SMB
+ * settings page, and only while our own extras section is also visible
+ * (Cond="($var['shareSMBEnabled'] == 'ads')" already gates that).
+ */
+(function activeDirectoryExtras_hideCoreJoinStatus() {
+    function hideRow() {
+        var form = document.querySelector('form[name="JoinOps"]');
+        if (!form) {
+            return false;
+        }
+        var found = false;
+        form.querySelectorAll('dt').forEach(function (dt) {
+            if (dt.textContent.trim().indexOf('AD join status') === 0) {
+                dt.style.display = 'none';
+                var dd = dt.nextElementSibling;
+                if (dd && dd.tagName === 'DD') {
+                    dd.style.display = 'none';
+                }
+                found = true;
+            }
+        });
+        return found;
+    }
+
+    // Try immediately first, since our section renders after the core
+    // section (Menu="SMB:4"), so it should already be in the DOM.
+    if (hideRow()) {
+        return;
+    }
+
+    // Fallback: core section loaded asynchronously. Watch briefly, then
+    // give up cleanly rather than observing forever.
+    var observer = new MutationObserver(function () {
+        if (hideRow()) {
+            observer.disconnect();
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    setTimeout(function () {
+        observer.disconnect();
+    }, 5000);
+})();
+</script>
 <?endif;?>
