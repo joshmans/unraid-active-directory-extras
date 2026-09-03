@@ -90,6 +90,27 @@ gh pr diff
 | 5 | `chore/sha256-plg` | `active.directory.plg` | `Change: Use SHA256 instead of MD5 for package integrity check` |
 | 6 | `feat/configurable-backup-path` | `active.directory/scripts/rc.startup`, `rc.shutdown`, `ActiveDirectory.page` | `Add: Configurable TDB backup destination (flash vs array/cache)` |
 
+## Branch reference — Found during development (not in the original brief)
+
+Do these **before** enhancement #6, once discovered — small, well-scoped,
+worth not letting pile up as forgotten TODOs.
+
+| Branch | File(s) touched | Commit message |
+|---|---|---|
+| `fix/clear-cache-feedback` | `active.directory/scripts/rc.active.directory` | `Fix: Surface clear_winbind_cache() success/failure to the GUI instead of failing silently` |
+| `chore/plg-maxver` | `active.directory.plg` | `Change: Set MaxVer bound based on confirmed-working Unraid version` |
+
+## Backlog — do after enhancement #6
+
+Lower priority, no rush. Not blocking anything, safe to pick up whenever.
+
+| Item | Notes |
+|---|---|
+| CI lint workflow (`chore/shellcheck-ci` from the table above) | Add a GitHub Action running `shellcheck` + `php -l` on push/PR. Cheap now that the codebase is stable; catches regressions on future changes automatically. |
+| i18n / language string bundle | The page uses `_(...)_ ` translation tags throughout but there's no actual translation file backing them (unlike some of dlandon's other plugins, which register strings via PRs into `unraid/lang-en_US`). Low priority unless non-English users are a priority. |
+| Real support thread (Phase 6 of `PUBLISHING_CHECKLIST.md`) | `supportURL` in the `.plg` is currently a placeholder pointing at GitHub Issues. Not code — just a "whenever ready to publicize" task. |
+| Final packaged `.tgz` + push | Once all of the above (or whatever subset is done) lands, do one final repackage of `active.directory/` into a fresh versioned `.tgz`, recompute SHA256, update the `.plg`'s version/URL/hash entities, and push — this is the actual artifact Unraid's plugin installer downloads, so it needs to reflect everything, not just what was true as of enhancement #5. |
+
 ## Branch reference — Fork setup itself (not from the brief)
 
 | Branch name | File(s) touched | Commit message |
