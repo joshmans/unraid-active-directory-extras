@@ -18,7 +18,8 @@
 		pluginURL="&pluginURL;"
 		support="&supportURL;"
 		icon="fa-share-alt-square"
-		min="6.9.0">
+		min="6.9.0"
+		max="7.3.2">
 
 <CHANGES>
 ###2026.09.03
@@ -28,6 +29,8 @@
 - Change: Remove incomplete LDAP option from Backend Database dropdown.
 - Add: Enable and validate Domain Range / Backend Range fields.
 - Fix: Surface clear_winbind_cache() success/failure to the GUI instead of failing silently.
+- Change: Set max supported Unraid version to 7.3.2 (confirmed working),
+  preventing installation on untested future Unraid releases.
 
 ###2026.08.25a
 - Fork: Rebranded plugin manifest for community fork — updated author,
