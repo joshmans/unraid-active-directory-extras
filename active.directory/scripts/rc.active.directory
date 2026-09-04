@@ -108,8 +108,19 @@ apply_settings()
 
 clear_winbind_cache()
 {
+	# Surfaces success/failure to the GUI via stdout, matching the pattern
+	# established for apply_settings() (see AI_REFACTOR_BRIEF.md, section
+	# 4, bug #4). This button already warns the user it will restart Samba
+	# and drop SMB connections (enhancement #4), so it should also confirm
+	# whether that actually succeeded rather than completing silently
+	# either way.
+
 	# Clear net cache
-	/usr/bin/net cache flush
+	if ! /usr/bin/net cache flush; then
+		logger "Error: 'net cache flush' failed." -t$PROG_NAME
+		echo "Error: Failed to flush the winbind cache. Samba was not restarted."
+		return 1
+	fi
 
 	# Configure shares for vfs act_xattr
 	$DOCROOT/plugins/active.directory/scripts/config_vfs
@@ -117,6 +128,28 @@ clear_winbind_cache()
 	# Restart samba
 	sleep 1
 	/etc/rc.d/rc.samba restart &>/dev/null
+
+	# Don't trust rc.samba's own exit code - confirmed via live testing
+	# that it returns 0 even when smbd fails to start entirely (e.g. the
+	# binary is missing). Verify the actual outcome directly instead by
+	# checking whether smbd is really running, with a brief retry loop
+	# since restart is asynchronous and smbd may take a moment to come up.
+	smbd_running=false
+	for _ in 1 2 3 4 5; do
+		if pgrep -x smbd >/dev/null 2>&1; then
+			smbd_running=true
+			break
+		fi
+		sleep 1
+	done
+
+	if [ "$smbd_running" = true ]; then
+		echo "Winbind cache cleared and Samba restarted successfully."
+	else
+		logger "Error: smbd is not running after cache flush and restart." -t$PROG_NAME
+		echo "Error: Winbind cache was cleared, but Samba failed to restart (smbd is not running). You may need to restart Samba manually."
+		return 1
+	fi
 
 	logger "Winbind cache cleared" -t$PROG_NAME
 }
