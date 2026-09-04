@@ -13,74 +13,95 @@
 #
 # Each restore is staged under a temp name and atomically renamed into place
 # rather than copied live (see AI_REFACTOR_BRIEF.md, section 4, bug #2).
+#
+# Backup source is configurable (enhancement #6, section 5) via
+# TDB_BACKUP_PATH in active.directory.cfg, defaulting to the flash drive
+# for backward compatibility. Falls back to the default if unset or if the
+# configured value doesn't look safe - this runs unattended at startup and
+# must never fail hard over a bad config value.
 
-TDB_SOURCE="/boot/config/plugins/active.directory/database"
+TDB_BACKUP_PATH_DEFAULT="/boot/config/plugins/active.directory/database"
+CONFIG="/boot/config/plugins/active.directory/active.directory.cfg"
 TDB_DEST="/var/lib/samba"
 
+if [ -f "$CONFIG" ]; then
+	# shellcheck disable=SC1090
+	source "$CONFIG"
+fi
+
+if [ -z "$TDB_BACKUP_PATH" ] || [[ "$TDB_BACKUP_PATH" == *".."* ]] || [[ ! "$TDB_BACKUP_PATH" =~ ^/(boot|mnt)/[A-Za-z0-9_./-]+$ ]]; then
+	if [ -n "$TDB_BACKUP_PATH" ]; then
+		logger "active.directory: invalid TDB_BACKUP_PATH '$TDB_BACKUP_PATH', falling back to default." -t active.directory
+	fi
+	TDB_BACKUP_PATH="$TDB_BACKUP_PATH_DEFAULT"
+fi
+
+TDB_SOURCE="$TDB_BACKUP_PATH"
+
 if [ ! -d "$TDB_SOURCE" ]; then
-    echo "Warning: TDB source directory $TDB_SOURCE does not exist."
-    exit 0
+	echo "Warning: TDB source directory $TDB_SOURCE does not exist."
+	exit 0
 fi
 
 # Distinct base filenames, derived by stripping the trailing timestamp
 basenames=$(find "$TDB_SOURCE" -maxdepth 1 -name '*.tdb.*' -printf '%f\n' 2>/dev/null \
-    | sed -E 's/\.tdb\.[0-9]+-[0-9]+$/.tdb/' \
-    | sort -u)
+	| sed -E 's/\.tdb\.[0-9]+-[0-9]+$/.tdb/' \
+	| sort -u)
 
 if [ -z "$basenames" ]; then
-    echo "No TDB backups found in $TDB_SOURCE. Skipping restoration."
-    exit 0
+	echo "No TDB backups found in $TDB_SOURCE. Skipping restoration."
+	exit 0
 fi
 
 # Stop samba before touching any live TDB files
 /etc/rc.d/rc.samba stop &>/dev/null
 
-echo "Restoring TDB files from persistent storage..."
+echo "Restoring TDB files from persistent storage ($TDB_SOURCE)..."
 
 restored_any=0
 
 while IFS= read -r base; do
-    # All generations for this basename, newest first
-    mapfile -t generations < <(find "$TDB_SOURCE" -maxdepth 1 -name "${base}.*" -printf '%T@ %p\n' 2>/dev/null \
-        | sort -rn | cut -d' ' -f2-)
+	# All generations for this basename, newest first
+	mapfile -t generations < <(find "$TDB_SOURCE" -maxdepth 1 -name "${base}.*" -printf '%T@ %p\n' 2>/dev/null \
+		| sort -rn | cut -d' ' -f2-)
 
-    if [ ${#generations[@]} -eq 0 ]; then
-        echo "Warning: no readable generation found for $base, skipping."
-        continue
-    fi
+	if [ ${#generations[@]} -eq 0 ]; then
+		echo "Warning: no readable generation found for $base, skipping."
+		continue
+	fi
 
-    valid_file=""
-    for candidate in "${generations[@]}"; do
-        if tdbtool "$candidate" check >/dev/null 2>&1; then
-            valid_file="$candidate"
-            break
-        else
-            logger "active.directory: TDB file $candidate failed validation, trying older generation."
-        fi
-    done
+	valid_file=""
+	for candidate in "${generations[@]}"; do
+		if tdbtool "$candidate" check >/dev/null 2>&1; then
+			valid_file="$candidate"
+			break
+		else
+			logger "active.directory: TDB file $candidate failed validation, trying older generation."
+		fi
+	done
 
-    if [ -z "$valid_file" ]; then
-        echo "Warning: no valid generation found for $base (all ${#generations[@]} candidate(s) failed validation), skipping restoration."
-        continue
-    fi
+	if [ -z "$valid_file" ]; then
+		echo "Warning: no valid generation found for $base (all ${#generations[@]} candidate(s) failed validation), skipping restoration."
+		continue
+	fi
 
-    dest_final="$TDB_DEST/$base"
-    dest_tmp="$TDB_DEST/.${base}.tmp"
+	dest_final="$TDB_DEST/$base"
+	dest_tmp="$TDB_DEST/.${base}.tmp"
 
-    if cp "$valid_file" "$dest_tmp"; then
-        mv -f "$dest_tmp" "$dest_final"
-        echo "Restored $base <- $valid_file"
-        restored_any=1
-    else
-        echo "Warning: failed to restore $base from $valid_file."
-        rm -f "$dest_tmp"
-    fi
+	if cp "$valid_file" "$dest_tmp"; then
+		mv -f "$dest_tmp" "$dest_final"
+		echo "Restored $base <- $valid_file"
+		restored_any=1
+	else
+		echo "Warning: failed to restore $base from $valid_file."
+		rm -f "$dest_tmp"
+	fi
 done <<< "$basenames"
 
 if [ "$restored_any" -eq 1 ]; then
-    echo "Restoring permissions..."
-    chown -R root:root "$TDB_DEST"
-    chmod -R 600 "$TDB_DEST"/*.tdb 2>/dev/null
+	echo "Restoring permissions..."
+	chown -R root:root "$TDB_DEST"
+	chmod -R 600 "$TDB_DEST"/*.tdb 2>/dev/null
 fi
 
 # Start samba regardless — if nothing restored, Samba just starts fresh

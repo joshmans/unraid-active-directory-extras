@@ -48,12 +48,84 @@ $join_is_ok				= ($join_state === 'Joined');
 
 <div class='pluginUpdate'></div>
 
+<link rel="stylesheet" type="text/css" href="/plugins/dynamix/styles/jquery.filetree.css">
+<script type="text/javascript" src="/plugins/dynamix/javascript/jquery.filetree.js"></script>
+
 <script>
 	$(function() {
 		if ( typeof caPluginUpdateCheck === "function" ) {
 			caPluginUpdateCheck("active.directory.plg",{element:".pluginUpdate"});
 		}
 	});
+
+	function activeDirectoryExtras_openFileBrowser(el) {
+		// Folder-only browse popup for TDB_BACKUP_PATH, matching the
+		// established pattern used by dlandon's own unassigned.devices
+		// plugin (openFileBrowserUser) rather than inventing a new
+		// convention - there is no single shared wrapper function across
+		// Unraid plugins, only the shared underlying jQuery fileTree
+		// widget (Unraid core, /plugins/dynamix/javascript/jquery.filetree.js)
+		// that each plugin's own wrapper builds on.
+		var inputElement = $(el);
+
+		if (inputElement.next().hasClass('fileTree')) {
+			return;
+		}
+
+		var root = inputElement.val() || '/mnt/';
+		var randomId = Math.floor((Math.random() * 100000) + 1);
+
+		inputElement.after("<span id='fileTree" + randomId + "' class='textarea fileTree'></span>");
+		var fileTreeElement = $('#fileTree' + randomId);
+
+		fileTreeElement.fileTree(
+			{
+				root: root,
+				top: root,
+				filter: 'HIDE_FILES_FILTER',
+				allowBrowsing: true
+			},
+			function (file) {
+				// Files are hidden via filter, so this shouldn't fire in
+				// practice - present for API completeness/consistency
+				// with the established pattern.
+				inputElement.val(file);
+				fileTreeElement.slideUp('fast', function () {
+					fileTreeElement.remove();
+				});
+				inputElement.trigger('change');
+			},
+			function (folder) {
+				inputElement.val(folder);
+				fileTreeElement.slideUp('fast', function () {
+					fileTreeElement.remove();
+				});
+				inputElement.trigger('change');
+			}
+		);
+
+		fileTreeElement.css({
+			'left': inputElement.position().left,
+			'top': (inputElement.position().top + inputElement.outerHeight()),
+			'width': (inputElement.width())
+		});
+
+		$(document).mouseup(function (e) {
+			if (! fileTreeElement.is(e.target) && fileTreeElement.has(e.target).length === 0) {
+				fileTreeElement.slideUp('fast', function () {
+					fileTreeElement.remove();
+				});
+			}
+		});
+
+		inputElement.on('keydown', function () {
+			fileTreeElement.slideUp('fast', function () {
+				fileTreeElement.remove();
+			});
+		});
+
+		fileTreeElement.slideDown('fast');
+	}
 
 	function activeDirectoryExtras_toggleJoinDetail() {
 		var detail = document.getElementById('ad_join_detail');
@@ -207,6 +279,22 @@ _(Winbind Cache Time)_:
 > This parameter specifies the time the winbindd daemon will cache user and group information before querying a Windows NT server again.
 >
 > This does not apply to authentication requests, these are always evaluated in real time unless the winbind offline logon option has been enabled.
+:end
+
+_(TDB Backup Path)_:
+: <input type="text" class="setting_input" name="TDB_BACKUP_PATH" value="<?=htmlspecialchars($active_directory_cfg['TDB_BACKUP_PATH']);?>" placeholder="/boot/config/plugins/active.directory/database" autocomplete="off" spellcheck="false" onclick="activeDirectoryExtras_openFileBrowser(this);">
+
+:active_directory_tdb_backup_path_plug:
+> Where winbind's TDB databases are backed up on shutdown and restored on
+> startup (see enhancement #6). Defaults to the flash drive for backward
+> compatibility. Must be under /boot/ or /mnt/ - click the field to browse
+> and select a folder, e.g. an appdata share such as
+> /mnt/user/appdata/active.directory/database, if you'd rather avoid
+> writing to flash on every reboot.
+>
+> Changing this does not move existing backups from the previous
+> location - they are left in place, and a fresh set of backups will
+> start accumulating at the new location.
 :end
 
 <input type="submit" name="#default" value="_(Default)_">
