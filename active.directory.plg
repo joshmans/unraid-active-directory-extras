@@ -22,6 +22,9 @@
 		max="7.3.2">
 
 <CHANGES>
+###2026.09.04
+- Add: Configurable TDB backup destination (flash vs array/cache).
+
 ###2026.09.03
 - Add: Live AD join status via wbinfo/net ads testjoin, replacing the built-in indicator.
 - Add: Confirmation dialog before Clear Cache, since clearing the cache
@@ -30,7 +33,7 @@
 - Add: Enable and validate Domain Range / Backend Range fields.
 - Fix: Surface clear_winbind_cache() success/failure to the GUI instead of failing silently.
 - Change: Set max supported Unraid version to 7.3.2 (confirmed working),
-  preventing installation on untested future Unraid releases.
+  preventing standard installation on untested future Unraid releases.
 
 ###2026.08.25a
 - Fork: Rebranded plugin manifest for community fork — updated author,
@@ -166,6 +169,7 @@ IDMAP_RANGE=""
 IDMAP_CACHE_TIME="43200"
 IDMAP_NEGATIVE_CACHE_TIME="300"
 WINBIND_CACHE_TIME="300"
+TDB_BACKUP_PATH="/boot/config/plugins/active.directory/database"
 ]]>
 </INLINE>
 </FILE>

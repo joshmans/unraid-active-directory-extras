@@ -60,6 +60,15 @@ apply_settings()
 		return 1
 	fi
 
+	# TDB_BACKUP_PATH is validated authoritatively (with a safe fallback)
+	# by rc.shutdown/rc.startup/rc.cleanup at actual use time, since it
+	# doesn't affect live AD/Samba config the way the ranges above do.
+	# This is just an early, non-blocking heads-up if the saved value
+	# looks wrong - Apply still proceeds either way.
+	if [ -n "$TDB_BACKUP_PATH" ] && { [[ "$TDB_BACKUP_PATH" == *".."* ]] || [[ ! "$TDB_BACKUP_PATH" =~ ^/(boot|mnt)/[A-Za-z0-9_./-]+$ ]]; }; then
+		echo "Warning: TDB Backup Path '$TDB_BACKUP_PATH' does not look valid (must be under /boot/ or /mnt/). The default location will be used instead until this is corrected."
+	fi
+
 	# Helper function to append a line to the configuration file
 	append_conf() {
 		echo "$1" >> /etc/samba/smb-active.directory.conf

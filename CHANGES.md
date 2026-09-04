@@ -33,3 +33,10 @@
   by checking whether smbd is running after restart, rather than trusting
   rc.samba's own exit code - confirmed via live testing that rc.samba
   restart returns 0 even when smbd fails to start entirely.
+- Change: Set max supported Unraid version to 7.3.2 (confirmed working),
+  preventing standard installation on untested future Unraid releases.
+- Add: Configurable TDB backup destination (flash vs array/cache) via
+  TDB_BACKUP_PATH. Validated in rc.shutdown/rc.startup/rc.cleanup with a
+  safe fallback to the flash default if unset or invalid. Picker uses
+  Unraid's standard folder-browse widget, matching the convention used
+  elsewhere in the Unraid ecosystem (e.g. Unassigned Devices).
