@@ -28,3 +28,8 @@
   low < high, and that the two ranges don't overlap - both client-side
   for immediate feedback and server-side in apply_settings() as the
   authoritative check.
+- Fix: clear_winbind_cache() now surfaces success/failure to the GUI
+  instead of completing silently either way. Verifies the actual outcome
+  by checking whether smbd is running after restart, rather than trusting
+  rc.samba's own exit code - confirmed via live testing that rc.samba
+  restart returns 0 even when smbd fails to start entirely.
