@@ -1,0 +1,56 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  shellcheck:
+    name: ShellCheck (bash scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Run shellcheck
+        run: |
+          # Excludes below are pre-existing style-level findings from the
+          # original (pre-fork) codebase, confirmed present before any fork
+          # work began - not something introduced by this repo, and not
+          # worth blocking every future PR over retroactively. Any NEW
+          # warning type introduced by a future change will still fail
+          # this check normally, since only these specific codes are
+          # suppressed, not shellcheck's severity level as a whole.
+          #
+          #   SC2006 - legacy backtick command substitution (style)
+          #   SC2086 - unquoted variable expansion (info)
+          #   SC2188 - redirection with no command, e.g. `> file` used as
+          #            a truncate idiom (warning) - intentional in the
+          #            original apply_settings() config-clearing step
+          shellcheck --exclude=SC2006,SC2086,SC2188 \
+            active.directory/scripts/rc.active.directory \
+            active.directory/scripts/rc.startup \
+            active.directory/scripts/rc.shutdown \
+            active.directory/scripts/rc.cleanup \
+            active.directory/event/started \
+            active.directory/event/stopping_svcs
+
+  php-lint:
+    name: PHP lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Lint PHP files
+        run: |
+          php -l active.directory/ActiveDirectory.page
+          php -l active.directory/scripts/config_vfs
