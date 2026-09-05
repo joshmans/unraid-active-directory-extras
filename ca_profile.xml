@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommunityApplications>
+  <Profile>
+    This repository hosts Active Directory Extras, a community-maintained
+    fork of dlandon's original active.directory plugin for Unraid. It adds
+    a settings page for tuning Samba/winbind Active Directory idmap
+    behavior and persists winbind's TDB databases across reboots.
+
+    This fork was created after the original GitHub repository was
+    removed and the author became unresponsive to maintenance questions.
+    All original credit belongs to Dan Landon; this repository exists to
+    keep the plugin functional and maintained on current Unraid releases.
+
+    For support, bug reports, or feature requests, please open an issue
+    on GitHub rather than posting in the original (unmaintained) forum
+    thread.
+  </Profile>
+  <Icon>https://raw.githubusercontent.com/joshmans/unraid-active-directory-extras/main/active.directory/icons/activedirectoryextras.png</Icon>
+  <WebPage>https://github.com/joshmans/unraid-active-directory-extras</WebPage>
+  <!-- Optional support links -->
+  <!-- <Forum>https://forums.unraid.net/topic/137467-active-directory-extras-plugin-allows-tweaking-some-ad-settings-in-samba/</Forum> -->
+</CommunityApplications>
