@@ -1,0 +1,33 @@
+<Plugin>
+  <!-- Delete this file if your repository does not ship plugins. -->
+  <!-- Required fields -->
+
+  <!-- Name of the plugin -->
+  <Name>Active Directory Extras</Name>
+
+  <!-- Plain text description -->
+  <Overview>This plugin adds additional tunable settings to the SMB Settings when Active Directory is enabled.</Overview>
+  
+  <!-- NOTE: PluginURL must match exactly the URL of the PluginURL in the .plg file-->
+  <PluginURL>https://raw.githubusercontent.com/joshmans/unraid-active-directory-extras/main/active.directory.plg.plg</PluginURL>
+  
+  <!-- Author of the plugin -->
+  <PluginAuthor>shwa87</PluginAuthor>
+
+  
+  <!-- Optional entries -->
+  
+  <!-- If the plugin file has the support attribute <Support>...</Support> will be ignored in this file -->
+  <!-- NOTE: If the plugin file does not have the support attribute, <Support>...</Support> is REQUIRED -->
+  <Support>https://github.com/joshmans/unraid-active-directory-extras/issues</Support>
+  
+  <!-- Project page -->
+  <Project>https://github.com/joshmans/unraid-active-directory-extras</Project>
+  
+  <!-- Valid category entries can be generated from the Application Categorizer plugin available in Apps -->
+  <Category>Tools:System</Category>
+  <!-- Minimum and maximum Unraid version.  If the plugin file has min or max attributes these entries will be ignored-->
+  <MinVer>6.9</MinVer>
+  <MaxVer>7.3</MaxVer>
+
+</Plugin>
