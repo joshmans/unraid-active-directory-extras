@@ -71,6 +71,7 @@ scripts and `php -l` against any PHP before submitting.
 GPLv2, same as upstream. See [`LICENSE.md`](./LICENSE.md).
 
 Original copyright (C) 2023–2025 Dan Landon.
+
 Fork maintenance copyright (C) 2026 Josh Mans
 
 ## Support

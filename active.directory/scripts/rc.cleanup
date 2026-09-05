@@ -7,40 +7,60 @@
 #
 # Requires rc.shutdown to write timestamped backups named
 # <basename>.tdb.<timestamp> rather than overwriting a single copy.
+#
+# Backup path is configurable (enhancement #6, section 5) via
+# TDB_BACKUP_PATH in active.directory.cfg, defaulting to the flash drive
+# for backward compatibility. Falls back to the default if unset or if the
+# configured value doesn't look safe - this script deletes files, so an
+# unvalidated path is a real risk, not just a cosmetic concern.
 
-TDB_BACKUP_DIR="/boot/config/plugins/active.directory/database"
+TDB_BACKUP_PATH_DEFAULT="/boot/config/plugins/active.directory/database"
+CONFIG="/boot/config/plugins/active.directory/active.directory.cfg"
 KEEP_COUNT=5
 
+if [ -f "$CONFIG" ]; then
+	# shellcheck disable=SC1090
+	source "$CONFIG"
+fi
+
+if [ -z "$TDB_BACKUP_PATH" ] || [[ "$TDB_BACKUP_PATH" == *".."* ]] || [[ ! "$TDB_BACKUP_PATH" =~ ^/(boot|mnt)/[A-Za-z0-9_./-]+$ ]]; then
+	if [ -n "$TDB_BACKUP_PATH" ]; then
+		logger "active.directory: invalid TDB_BACKUP_PATH '$TDB_BACKUP_PATH', falling back to default." -t active.directory
+	fi
+	TDB_BACKUP_PATH="$TDB_BACKUP_PATH_DEFAULT"
+fi
+
+TDB_BACKUP_DIR="$TDB_BACKUP_PATH"
+
 if [ ! -d "$TDB_BACKUP_DIR" ]; then
-    echo "Warning: Backup directory $TDB_BACKUP_DIR does not exist."
-    exit 0
+	echo "Warning: Backup directory $TDB_BACKUP_DIR does not exist."
+	exit 0
 fi
 
 echo "Cleaning up old TDB backups in $TDB_BACKUP_DIR..."
 
 # Distinct base filenames, derived by stripping the trailing timestamp
 basenames=$(find "$TDB_BACKUP_DIR" -maxdepth 1 -name '*.tdb.*' -printf '%f\n' 2>/dev/null \
-    | sed -E 's/\.tdb\.[0-9]+-[0-9]+$/.tdb/' \
-    | sort -u)
+	| sed -E 's/\.tdb\.[0-9]+-[0-9]+$/.tdb/' \
+	| sort -u)
 
 if [ -z "$basenames" ]; then
-    echo "No timestamped backups found to clean up."
-    exit 0
+	echo "No timestamped backups found to clean up."
+	exit 0
 fi
 
 while IFS= read -r base; do
-    mapfile -t generations < <(ls -1t "$TDB_BACKUP_DIR/${base}."* 2>/dev/null)
-    count=${#generations[@]}
+	mapfile -t generations < <(ls -1t "$TDB_BACKUP_DIR/${base}."* 2>/dev/null)
+	count=${#generations[@]}
 
-    if [ "$count" -gt "$KEEP_COUNT" ]; then
-        for ((i = KEEP_COUNT; i < count; i++)); do
-            echo "Removing old backup: ${generations[i]}"
-            rm -f "${generations[i]}"
-        done
-    else
-        echo "$base: $count generation(s), nothing to prune."
-    fi
+	if [ "$count" -gt "$KEEP_COUNT" ]; then
+		for ((i = KEEP_COUNT; i < count; i++)); do
+			echo "Removing old backup: ${generations[i]}"
+			rm -f "${generations[i]}"
+		done
+	else
+		echo "$base: $count generation(s), nothing to prune."
+	fi
 done <<< "$basenames"
 
 exit 0
-

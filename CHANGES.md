@@ -22,3 +22,21 @@
   status with expandable diagnostic detail on failure.
 - Add: Confirmation dialog before Clear Cache, since clearing the cache
   restarts Samba and drops any active SMB connections.
+- Change: Remove incomplete LDAP option from Backend Database dropdown.
+- Add: Enable and validate Domain Backend Range / Backend Range fields
+  (previously disabled placeholders). Validates format (low-high),
+  low < high, and that the two ranges don't overlap - both client-side
+  for immediate feedback and server-side in apply_settings() as the
+  authoritative check.
+- Fix: clear_winbind_cache() now surfaces success/failure to the GUI
+  instead of completing silently either way. Verifies the actual outcome
+  by checking whether smbd is running after restart, rather than trusting
+  rc.samba's own exit code - confirmed via live testing that rc.samba
+  restart returns 0 even when smbd fails to start entirely.
+- Change: Set max supported Unraid version to 7.3.2 (confirmed working),
+  preventing standard installation on untested future Unraid releases.
+- Add: Configurable TDB backup destination (flash vs array/cache) via
+  TDB_BACKUP_PATH. Validated in rc.shutdown/rc.startup/rc.cleanup with a
+  safe fallback to the flash default if unset or invalid. Picker uses
+  Unraid's standard folder-browse widget, matching the convention used
+  elsewhere in the Unraid ecosystem (e.g. Unassigned Devices).

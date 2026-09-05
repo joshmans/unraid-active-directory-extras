@@ -3,8 +3,72 @@
 # apply|backend|range|cache_time|idmap_cache|idmap_neg_cache.
 #
 
+validate_range()
+{
+	# Validates a "low-high" range string (enhancement #2 - see
+	# AI_REFACTOR_BRIEF.md section 5). Returns 0 if the format is correct
+	# and low < high, 1 otherwise. This is the authoritative check - the
+	# page's JS validation is a convenience only, since a request could
+	# always be POSTed directly to update.php bypassing the browser.
+	local range="$1"
+	if [[ ! "$range" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+		return 1
+	fi
+	local low="${BASH_REMATCH[1]}"
+	local high="${BASH_REMATCH[2]}"
+	if [ "$low" -ge "$high" ]; then
+		return 1
+	fi
+	return 0
+}
+
+ranges_overlap()
+{
+	# $1 and $2 are "low-high" strings already confirmed valid by
+	# validate_range. Returns 0 (true) if they overlap, 1 (false) if not.
+	local low1 high1 low2 high2
+	IFS='-' read -r low1 high1 <<< "$1"
+	IFS='-' read -r low2 high2 <<< "$2"
+	if [ "$low1" -le "$high2" ] && [ "$low2" -le "$high1" ]; then
+		return 0
+	fi
+	return 1
+}
+
 apply_settings()
 {
+	# Validate the Domain Backend Range and Backend Range before writing
+	# anything. Uses the same echo-to-stdout pattern as the PID-file
+	# check below (see AI_REFACTOR_BRIEF.md section 4, bug #4) so an
+	# invalid range shows up in the webGUI's progress frame instead of
+	# failing silently.
+	if ! validate_range "$IDMAP_DOMAIN_RANGE"; then
+		logger "Error: invalid IDMAP_DOMAIN_RANGE '$IDMAP_DOMAIN_RANGE'." -t$PROG_NAME
+		echo "Error: Domain Backend Range '$IDMAP_DOMAIN_RANGE' is invalid. Expected format: low-high (e.g. 100000-199999), with low less than high. Settings were not applied."
+		return 1
+	fi
+
+	if ! validate_range "$IDMAP_RANGE"; then
+		logger "Error: invalid IDMAP_RANGE '$IDMAP_RANGE'." -t$PROG_NAME
+		echo "Error: Backend Range '$IDMAP_RANGE' is invalid. Expected format: low-high (e.g. 10000-99999), with low less than high. Settings were not applied."
+		return 1
+	fi
+
+	if ranges_overlap "$IDMAP_DOMAIN_RANGE" "$IDMAP_RANGE"; then
+		logger "Error: IDMAP_DOMAIN_RANGE and IDMAP_RANGE overlap." -t$PROG_NAME
+		echo "Error: Domain Backend Range ($IDMAP_DOMAIN_RANGE) and Backend Range ($IDMAP_RANGE) must not overlap. Settings were not applied."
+		return 1
+	fi
+
+	# TDB_BACKUP_PATH is validated authoritatively (with a safe fallback)
+	# by rc.shutdown/rc.startup/rc.cleanup at actual use time, since it
+	# doesn't affect live AD/Samba config the way the ranges above do.
+	# This is just an early, non-blocking heads-up if the saved value
+	# looks wrong - Apply still proceeds either way.
+	if [ -n "$TDB_BACKUP_PATH" ] && { [[ "$TDB_BACKUP_PATH" == *".."* ]] || [[ ! "$TDB_BACKUP_PATH" =~ ^/(boot|mnt)/[A-Za-z0-9_./-]+$ ]]; }; then
+		echo "Warning: TDB Backup Path '$TDB_BACKUP_PATH' does not look valid (must be under /boot/ or /mnt/). The default location will be used instead until this is corrected."
+	fi
+
 	# Helper function to append a line to the configuration file
 	append_conf() {
 		echo "$1" >> /etc/samba/smb-active.directory.conf
@@ -53,8 +117,19 @@ apply_settings()
 
 clear_winbind_cache()
 {
+	# Surfaces success/failure to the GUI via stdout, matching the pattern
+	# established for apply_settings() (see AI_REFACTOR_BRIEF.md, section
+	# 4, bug #4). This button already warns the user it will restart Samba
+	# and drop SMB connections (enhancement #4), so it should also confirm
+	# whether that actually succeeded rather than completing silently
+	# either way.
+
 	# Clear net cache
-	/usr/bin/net cache flush
+	if ! /usr/bin/net cache flush; then
+		logger "Error: 'net cache flush' failed." -t$PROG_NAME
+		echo "Error: Failed to flush the winbind cache. Samba was not restarted."
+		return 1
+	fi
 
 	# Configure shares for vfs act_xattr
 	$DOCROOT/plugins/active.directory/scripts/config_vfs
@@ -62,6 +137,28 @@ clear_winbind_cache()
 	# Restart samba
 	sleep 1
 	/etc/rc.d/rc.samba restart &>/dev/null
+
+	# Don't trust rc.samba's own exit code - confirmed via live testing
+	# that it returns 0 even when smbd fails to start entirely (e.g. the
+	# binary is missing). Verify the actual outcome directly instead by
+	# checking whether smbd is really running, with a brief retry loop
+	# since restart is asynchronous and smbd may take a moment to come up.
+	smbd_running=false
+	for _ in 1 2 3 4 5; do
+		if pgrep -x smbd >/dev/null 2>&1; then
+			smbd_running=true
+			break
+		fi
+		sleep 1
+	done
+
+	if [ "$smbd_running" = true ]; then
+		echo "Winbind cache cleared and Samba restarted successfully."
+	else
+		logger "Error: smbd is not running after cache flush and restart." -t$PROG_NAME
+		echo "Error: Winbind cache was cleared, but Samba failed to restart (smbd is not running). You may need to restart Samba manually."
+		return 1
+	fi
 
 	logger "Winbind cache cleared" -t$PROG_NAME
 }
@@ -193,6 +290,7 @@ fi
 # read our configuration.
 plugin="active.directory"
 CONFIG="/boot/config/plugins/${plugin}/${plugin}.cfg"
+# shellcheck disable=SC1090
 source $CONFIG
 
 # Set default IDMAP_DOMAIN_RANGE if blank in settings
