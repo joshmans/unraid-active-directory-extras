@@ -290,6 +290,7 @@ fi
 # read our configuration.
 plugin="active.directory"
 CONFIG="/boot/config/plugins/${plugin}/${plugin}.cfg"
+# shellcheck disable=SC1090
 source $CONFIG
 
 # Set default IDMAP_DOMAIN_RANGE if blank in settings
