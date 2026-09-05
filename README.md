@@ -24,8 +24,7 @@ the plugin functional and maintained on current Unraid releases. It is
 resumes maintenance of the original, users should prefer his version and
 this fork will be marked as superseded.
 
-All original copyright and license terms are preserved below and in
-[`LICENSE.md`](./LICENSE.md).
+All original copyright and license terms are preserved.
 
 ## What it does
 
