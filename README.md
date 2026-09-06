@@ -52,7 +52,7 @@ All original copyright and license terms are preserved.
 ## Compatibility
 
 - Minimum Unraid version: 6.9.x
-- Tested up to version: 7.3.2
+- Tested up to version: 7.4.0-beta2
 
 ## Changelog
 
