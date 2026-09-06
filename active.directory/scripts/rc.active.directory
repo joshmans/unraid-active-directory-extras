@@ -282,6 +282,89 @@ get_join_status()
 	fi
 }
 
+get_current_domain()
+{
+	# Currently configured AD realm (FQDN), for display alongside the
+	# Rejoin/Leave/Change Domain controls - sourced live from smb.conf via
+	# testparm, matching the existing get_domain_backend()-style getters,
+	# rather than trusting anything we might have cached ourselves.
+	value=`/usr/bin/testparm -s 2>/dev/null | /usr/bin/grep -i '^[[:space:]]*realm' | awk '{print $3}'`
+	echo "$value"
+}
+
+ad_join()
+{
+	# Join/rejoin AD directly via net ads join, without touching the array
+	# or smb.conf's security mode - see BUGS_FOUND.md #2 and #3 (Unraid's
+	# stock Join button stops the array unconditionally, even for a plain
+	# rejoin, and its Join/Leave button states are driven by the same
+	# unreliable join-status detection this fork already works around).
+	# Only meaningful when the security mode is already 'ads' (this
+	# page's own Cond already guarantees that), so Domain/Realm/Workgroup
+	# are already configured in smb.conf from whenever the mode was
+	# originally set - we don't need to collect them again here.
+	local login="$1"
+	# $2 arrives base64-encoded from the page's JS - see BUGS_FOUND.md #4:
+	# Unraid's own /update.php dispatcher logs every #arg[] value to
+	# syslog in cleartext before this script even runs, which we can't
+	# prevent directly. This decode step exists purely to avoid the
+	# literal plaintext password appearing in that log line - it is
+	# obfuscation, not real security.
+	local password
+	password=$(printf '%s' "$2" | base64 -d 2>/dev/null)
+
+	if [ -z "$login" ] || [ -z "$password" ]; then
+		echo "Error: Login and password are required to join."
+		return 1
+	fi
+
+	join_output=$(/usr/bin/net ads join -U "${login}%${password}" 2>&1)
+	join_status=$?
+
+	if [ $join_status -eq 0 ]; then
+		/usr/bin/net cache flush
+		/usr/bin/smbcontrol "$(cat /var/run/smbd.pid 2>/dev/null)" reload-config 2>&1
+		echo "Successfully joined the domain. Array and Samba were not restarted."
+	else
+		# Never log the raw net command output to syslog - in some failure
+		# modes it can echo back more diagnostic detail than expected.
+		# Full detail goes to the browser (this request only), never to
+		# a persisted system log.
+		logger "Error: net ads join failed (see webGUI for detail)." -t$PROG_NAME
+		echo "Error: Failed to join the domain. $join_output"
+		return 1
+	fi
+}
+
+ad_leave()
+{
+	# Leave AD directly via net ads leave, without touching the array or
+	# smb.conf's security mode - see BUGS_FOUND.md #2 and #3.
+	local login="$1"
+	# $2 arrives base64-encoded from the page's JS - see BUGS_FOUND.md #4
+	# (obfuscation only, not real security - see ad_join for detail).
+	local password
+	password=$(printf '%s' "$2" | base64 -d 2>/dev/null)
+
+	if [ -z "$login" ] || [ -z "$password" ]; then
+		echo "Error: Login and password are required to leave."
+		return 1
+	fi
+
+	leave_output=$(/usr/bin/net ads leave -U "${login}%${password}" 2>&1)
+	leave_status=$?
+
+	if [ $leave_status -eq 0 ]; then
+		/usr/bin/net cache flush
+		/usr/bin/smbcontrol "$(cat /var/run/smbd.pid 2>/dev/null)" reload-config 2>&1
+		echo "Successfully left the domain. Array and Samba were not restarted."
+	else
+		logger "Error: net ads leave failed (see webGUI for detail)." -t$PROG_NAME
+		echo "Error: Failed to leave the domain. $leave_output"
+		return 1
+	fi
+}
+
 DOCROOT=`/usr/bin/grep -Po '^chdir = \K.*' /etc/php-fpm.d/www.conf`
 if [ -z ${DOCROOT} ];then
 	DOCROOT="/usr/local/emhttp"
@@ -351,6 +434,15 @@ case "$1" in
 	'join_status')
 		get_join_status
 	;;
+	'current_domain')
+		get_current_domain
+	;;
+	'ad_join')
+		ad_join "$2" "$3"
+	;;
+	'ad_leave')
+		ad_leave "$2" "$3"
+	;;
 	*)
-		echo "usage $0 apply|clear_cache|domain_backend|domain_range|backend|range|winbind_cache|idmap_cache|idmap_neg_cache|join_status"
+		echo "usage $0 apply|clear_cache|domain_backend|domain_range|backend|range|winbind_cache|idmap_cache|idmap_neg_cache|join_status|current_domain|ad_join|ad_leave"
 esac

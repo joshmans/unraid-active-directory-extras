@@ -44,6 +44,7 @@ $join_status_parts		= explode('|', $join_status_raw, 2);
 $join_state				= $join_status_parts[0];
 $join_detail			= isset($join_status_parts[1]) ? $join_status_parts[1] : '';
 $join_is_ok				= ($join_state === 'Joined');
+$current_domain			= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active.directory current_domain" );
 ?>
 
 <div class='pluginUpdate'></div>
@@ -200,6 +201,30 @@ $join_is_ok				= ($join_state === 'Joined');
 		<?endif;?>
 	<?endif;?>
 	</p>
+
+	<p>
+	<b>_(Rejoin domain)_:</b> <?=htmlspecialchars($current_domain)?>
+	</p>
+	<form name="ad_join_leave" method="POST" action="/update.php" target="progressFrame">
+		<input type="hidden" name="#command" value="/plugins/active.directory/scripts/rc.active.directory">
+		<input type="hidden" id="ad_join_leave_action" name="#arg[1]" value="ad_join">
+		_(AD account login)_ <i>_(required for both Rejoin and Leave)_</i>:
+		: <input type="text" id="ad_join_leave_login" name="#arg[2]" maxlength="40" autocomplete="off">
+		_(AD account password)_:
+		: <input type="password" id="ad_join_leave_password_visible" maxlength="40" autocomplete="off">
+		  <input type="hidden" id="ad_join_leave_password_encoded" name="#arg[3]" value="">
+		&nbsp;
+		: <span class="inline-block">
+			<span title="_(This refreshes the domain trust directly and does not stop the array or restart Samba, unlike Unraid's built-in Join button)_.">
+				<input type="submit" value="_(Rejoin)_" onclick="activeDirectoryExtras_prepareJoinLeaveSubmit('ad_join');">
+			</span>
+			<?if ($join_is_ok):?>
+			<input type="submit" value="_(Leave Domain)_" onclick="activeDirectoryExtras_prepareJoinLeaveSubmit('ad_leave'); return confirm('_(Are you sure you want to leave the domain? This uses the login and password entered above.)_');">
+			<?else:?>
+			<a href="#" onclick="activeDirectoryExtras_revealJoinOps(); return false;" style="margin-left:8px;">_(Change Domain)_ &rarr;</a>
+			<?endif;?>
+		  </span>
+	</form>
 	<p>
 	_(When you change a backend database, you will lose your permission settings and you'll have to re-enter them)_.  _(AD permissions are persistent after a reboot)_.
 	</p>
@@ -327,38 +352,36 @@ _(Click on 'Help' for more information)_.
 </div>
 
 <script>
-// active.directory extras: hides the built-in AD join status row (often
-// inaccurate) in favor of our own status display. See enhancement #3.
-(function activeDirectoryExtras_hideCoreJoinStatus() {
-    function hideRow() {
+// active.directory extras: hides Unraid's built-in AD Join/Leave form
+// (JoinOps) in favor of our own Rejoin/Leave controls, which cover
+// everything this form offers for the case where the security mode is
+// already 'ads' - see enhancement #3 and BUGS_FOUND.md #2/#3 for why
+// (the core Join button stops the array unnecessarily, and its Join/
+// Leave enabled state is driven by the same unreliable status check our
+// own display already works around). A "Change Domain" link reveals
+// this form again for the one case we deliberately don't replicate:
+// joining a genuinely different domain, which still needs the original
+// Domain/Domain Short fields.
+(function () {
+    function hideForm() {
         var form = document.querySelector('form[name="JoinOps"]');
         if (!form) {
             return false;
         }
-        var found = false;
-        form.querySelectorAll('dt').forEach(function (dt) {
-            if (dt.textContent.trim().indexOf('AD join status') === 0) {
-                dt.style.display = 'none';
-                var dd = dt.nextElementSibling;
-                if (dd && dd.tagName === 'DD') {
-                    dd.style.display = 'none';
-                }
-                found = true;
-            }
-        });
-        return found;
+        form.style.display = 'none';
+        return true;
     }
 
     // Try immediately first, since our section renders after the core
     // section (Menu="SMB:4"), so it should already be in the DOM.
-    if (hideRow()) {
+    if (hideForm()) {
         return;
     }
 
     // Fallback: core section loaded asynchronously. Watch briefly, then
     // give up cleanly rather than observing forever.
     var observer = new MutationObserver(function () {
-        if (hideRow()) {
+        if (hideForm()) {
             observer.disconnect();
         }
     });
@@ -368,5 +391,34 @@ _(Click on 'Help' for more information)_.
         observer.disconnect();
     }, 5000);
 })();
+
+function activeDirectoryExtras_revealJoinOps() {
+    var form = document.querySelector('form[name="JoinOps"]');
+    if (form) {
+        form.style.display = '';
+    }
+}
+
+function activeDirectoryExtras_prepareJoinLeaveSubmit(action) {
+    var actionField = document.getElementById('ad_join_leave_action');
+    if (actionField) {
+        actionField.value = action;
+    }
+
+    // Obfuscate (not encrypt) the password before it becomes part of the
+    // command Unraid's own /update.php dispatcher logs to syslog in
+    // cleartext - see BUGS_FOUND.md #4. This is not real security (base64
+    // is trivially reversible), but it does stop the literal plaintext
+    // password from appearing in a log a human might glance at or share
+    // for troubleshooting. Decoded server-side in rc.active.directory.
+    var visibleField = document.getElementById('ad_join_leave_password_visible');
+    var encodedField = document.getElementById('ad_join_leave_password_encoded');
+    if (visibleField && encodedField) {
+        // UTF-8 safe encoding - plain btoa() throws on non-ASCII characters,
+        // which would otherwise hard-fail this feature for any password
+        // containing them.
+        encodedField.value = btoa(unescape(encodeURIComponent(visibleField.value)));
+    }
+}
 </script>
 <?endif;?>
