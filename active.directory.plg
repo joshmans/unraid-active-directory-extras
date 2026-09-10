@@ -22,6 +22,10 @@
 		max="7.4.0">
 
 <CHANGES>
+###Unreleased
+- Fix: Remove stray leading colon next to Rejoin/Leave Domain buttons;
+  disable Rejoin when already joined.
+
 ###2026.09.09
 - Add: Rejoin/Leave Domain controls, replacing Unraid's stock AD Join/Leave
   form when the security mode is already Active Directory. Rejoin re-joins
