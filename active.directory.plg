@@ -31,6 +31,9 @@
   Credentials are not persisted; the password is base64-obfuscated
   client-side before submission to avoid Unraid's update.php dispatcher
   logging it to syslog in cleartext.
+- Fix: AD Rejoin/Leave now passes the account password to net ads join/
+  net ads leave via stdin instead of as a command-line argument, removing
+  the last window where the plaintext password was visible via ps/proc.
 
 ###2026.09.04
 - Add: Configurable TDB backup destination (flash vs array/cache).
