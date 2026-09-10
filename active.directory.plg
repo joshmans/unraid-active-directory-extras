@@ -22,6 +22,16 @@
 		max="7.4.0">
 
 <CHANGES>
+###Unreleased
+- Add: Rejoin/Leave Domain controls, replacing Unraid's stock AD Join/Leave
+  form when the security mode is already Active Directory. Rejoin re-joins
+  the currently configured domain without stopping the array or restarting
+  Samba. Leave Domain requires the same AD login/password. A "Change Domain"
+  link reveals the original stock form for joining a different domain.
+  Credentials are not persisted; the password is base64-obfuscated
+  client-side before submission to avoid Unraid's update.php dispatcher
+  logging it to syslog in cleartext.
+
 ###2026.09.04
 - Add: Configurable TDB backup destination (flash vs array/cache).
 - Fix: Add missing TDB_BACKUP_PATH default to default.cfg, so the
