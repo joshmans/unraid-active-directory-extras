@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Fix: Remove a stray leading colon rendered next to the Rejoin/Leave
+  Domain buttons, and disable the Rejoin button when already joined
+  (it remains a no-op refresh of the trust secret while joined, but
+  greying it out makes the intended action clearer - use Leave Domain
+  first if you actually need to join a different account).
 - Add: Rejoin/Leave Domain controls, replacing Unraid's stock AD Join/Leave
   form when the security mode is already Active Directory. An always-available
   Rejoin button re-joins the currently configured domain without stopping

@@ -214,9 +214,9 @@ $current_domain			= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active
 		: <input type="password" id="ad_join_leave_password_visible" maxlength="40" autocomplete="off">
 		  <input type="hidden" id="ad_join_leave_password_encoded" name="#arg[3]" value="">
 		&nbsp;
-		: <span class="inline-block">
+		<span class="inline-block">
 			<span title="_(This refreshes the domain trust directly and does not stop the array or restart Samba, unlike Unraid's built-in Join button)_.">
-				<input type="submit" value="_(Rejoin)_" onclick="activeDirectoryExtras_prepareJoinLeaveSubmit('ad_join');">
+				<input type="submit" value="_(Rejoin)_" <?=$join_is_ok ? 'disabled' : ''?> onclick="activeDirectoryExtras_prepareJoinLeaveSubmit('ad_join');">
 			</span>
 			<?if ($join_is_ok):?>
 			<input type="submit" value="_(Leave Domain)_" onclick="activeDirectoryExtras_prepareJoinLeaveSubmit('ad_leave'); return confirm('_(Are you sure you want to leave the domain? This uses the login and password entered above.)_');">
