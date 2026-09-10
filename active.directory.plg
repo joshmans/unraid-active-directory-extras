@@ -3,12 +3,12 @@
 <!ENTITY name		"active.directory">
 <!ENTITY author		"joshmans">
 <!ENTITY repo		"unraid-active-directory-extras">
-<!ENTITY version	"2026.09.04">
+<!ENTITY version	"2026.09.09">
 <!ENTITY launch		"Settings/SMB">
 <!ENTITY gitURL		"https://raw.githubusercontent.com/&author;/&repo;/main">
 <!ENTITY pluginURL	"&gitURL;/&name;.plg">
 <!ENTITY supportURL	"https://github.com/&author;/&repo;/issues">
-<!ENTITY SHA256		"cbb37c78d897c187ba54c42593c32c4509b7f8f0cdc9f5cbf4b6a2e4e4831e34">
+<!ENTITY SHA256		"1afe38f42296048b5b6061383bb1bef6bdbce5868c2c385ce9fbf30dfffa82e8">
 ]>
 
 <PLUGIN	name="&name;"
@@ -22,7 +22,7 @@
 		max="7.4.0">
 
 <CHANGES>
-###Unreleased
+###2026.09.09
 - Add: Rejoin/Leave Domain controls, replacing Unraid's stock AD Join/Leave
   form when the security mode is already Active Directory. Rejoin re-joins
   the currently configured domain without stopping the array or restarting
