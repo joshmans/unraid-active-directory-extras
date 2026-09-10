@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Add: Rejoin/Leave Domain controls, replacing Unraid's stock AD Join/Leave
+  form when the security mode is already Active Directory. An always-available
+  Rejoin button re-joins the currently configured domain without stopping
+  the array or restarting Samba (unlike Unraid's built-in Join button, which
+  stops the array unconditionally even for a plain rejoin). Leave Domain
+  requires the same AD login/password. A "Change Domain" link reveals the
+  original stock form for the case of joining a genuinely different domain,
+  which this replacement does not otherwise handle. Credentials are not
+  persisted to the plugin's config file; the password is base64-obfuscated
+  client-side before submission (not real security, but avoids Unraid's own
+  update.php dispatcher logging it to syslog in cleartext).
 - Fork: Continued as community fork after upstream repository was removed
   and the author became unresponsive. See README.md for details.
 - Fix: Per-file TDB backup retention instead of global retention. Backups
