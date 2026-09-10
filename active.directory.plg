@@ -3,12 +3,12 @@
 <!ENTITY name		"active.directory">
 <!ENTITY author		"joshmans">
 <!ENTITY repo		"unraid-active-directory-extras">
-<!ENTITY version	"2026.09.09">
+<!ENTITY version	"2026.09.10">
 <!ENTITY launch		"Settings/SMB">
 <!ENTITY gitURL		"https://raw.githubusercontent.com/&author;/&repo;/main">
 <!ENTITY pluginURL	"&gitURL;/&name;.plg">
 <!ENTITY supportURL	"https://github.com/&author;/&repo;/issues">
-<!ENTITY SHA256		"1afe38f42296048b5b6061383bb1bef6bdbce5868c2c385ce9fbf30dfffa82e8">
+<!ENTITY SHA256		"633eeeed9fc91af6e70e5a2d48a35ae5a7f38da9beb5c81270b00c7a738279e2">
 ]>
 
 <PLUGIN	name="&name;"
@@ -22,7 +22,7 @@
 		max="7.4.0">
 
 <CHANGES>
-###Unreleased
+###2026.09.10
 - Fix: Remove stray leading colon next to Rejoin/Leave Domain buttons;
   disable Rejoin when already joined.
 
