@@ -12,6 +12,14 @@
   persisted to the plugin's config file; the password is base64-obfuscated
   client-side before submission (not real security, but avoids Unraid's own
   update.php dispatcher logging it to syslog in cleartext).
+- Fix: AD Rejoin/Leave now passes the account password to `net ads join`/
+  `net ads leave` via stdin instead of as a `-U login%password` command-line
+  argument. The prior approach was already protected against syslog exposure
+  (see the base64 obfuscation note above), but the plaintext password was
+  still visible for the process's lifetime to anything able to read
+  `/proc/<pid>/cmdline` on the box - confirmed via direct testing, since
+  older Samba documentation and mailing-list reports suggested stdin input
+  wasn't supported for this command (it is).
 - Fork: Continued as community fork after upstream repository was removed
   and the author became unresponsive. See README.md for details.
 - Fix: Per-file TDB backup retention instead of global retention. Backups

@@ -318,7 +318,18 @@ ad_join()
 		return 1
 	fi
 
-	join_output=$(/usr/bin/net ads join -U "${login}%${password}" 2>&1)
+	# Pass the password via stdin rather than -U login%password. Confirmed
+	# empirically (not documented behavior - the net(8) manpage and older
+	# mailing-list reports suggested this wasn't possible) that net ads
+	# join/leave silently consumes a piped password instead of prompting.
+	# This keeps the plaintext password out of the process's argv
+	# entirely, so it never appears in `ps`/`/proc/<pid>/cmdline` to any
+	# other process on the system - closing the one gap the base64
+	# syslog obfuscation above doesn't address. Uses printf | pipe, not a
+	# bash herestring (<<<), since herestrings are backed by a temp file
+	# on some bash versions and would reintroduce plaintext-on-disk
+	# exposure instead.
+	join_output=$(printf '%s\n' "$password" | /usr/bin/net ads join -U "$login" 2>&1)
 	join_status=$?
 
 	if [ $join_status -eq 0 ]; then
@@ -351,7 +362,9 @@ ad_leave()
 		return 1
 	fi
 
-	leave_output=$(/usr/bin/net ads leave -U "${login}%${password}" 2>&1)
+	# See ad_join for why this is piped via stdin instead of -U
+	# login%password - keeps the plaintext password out of argv/ps.
+	leave_output=$(printf '%s\n' "$password" | /usr/bin/net ads leave -U "$login" 2>&1)
 	leave_status=$?
 
 	if [ $leave_status -eq 0 ]; then
