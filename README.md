@@ -1,30 +1,27 @@
-# Active Directory Extras (Community Fork)
+# Active Directory Extras
 
 A settings page for tuning Samba/winbind Active Directory idmap behavior on
 Unraid, and persisting winbind's TDB databases across reboots (Unraid's OS
 partition is RAM-based, so these are normally lost on every restart).
 
-## ⚠️ Fork Notice / Provenance
+## Fork Notice / Provenance
 
-This is a **community-maintained fork** of the `active.directory` plugin
-originally written by **Dan Landon (dlandon)**.
+This plugin is a continuation of the `active.directory` plugin originally
+written by **Dan Landon (dlandon)**.
 
-- The original repository (`github.com/dlandon/active.directory`) has been
-  removed from GitHub.
-- The original support thread on the Unraid forums has had no response from
-  the author — including direct questions about the plugin's status — since
-  his last post on **February 14, 2025**.
-- As of **August 23, 2026**, the author's GitHub profile shows a reduced
-  repository count compared to earlier, consistent with other plugins being
-  taken down as well, not just this one.
+- The original repository
+  ([`github.com/dlandon/active.directory`](https://github.com/dlandon/active.directory))
+  was briefly removed from GitHub. It has since been made public again and
+  **archived**, and its README now marks the plugin as deprecated and points
+  to this repository as the place where development continues.
+- This repository is the maintained successor. Bug fixes, new features, and
+  compatibility updates for current Unraid releases land here, not upstream.
+- If you are still running the original plugin, switch to this one (see
+  [Installation](#installation)); the original will no longer receive updates.
 
-Given the lack of a live upstream to contribute to, this fork exists to keep
-the plugin functional and maintained on current Unraid releases. It is
-**not** affiliated with or endorsed by the original author. If Dan Landon
-resumes maintenance of the original, users should prefer his version and
-this fork will be marked as superseded.
-
-All original copyright and license terms are preserved.
+This repository is not otherwise affiliated with or endorsed by the original
+author beyond the pointer in the archived repository. All original copyright
+and license terms are preserved.
 
 ## What it does
 
@@ -44,7 +41,7 @@ All original copyright and license terms are preserved.
 
 1. In Unraid, go to **Plugins → Install Plugin** and paste:
    ```
-   https://raw.githubusercontent.com/joshmans/unraid-active-directory-extras/master/active.directory.plg
+   https://raw.githubusercontent.com/joshmans/unraid-active-directory-extras/main/active.directory.plg
    ```
 2. Or search for it by name in the **Apps** tab once it's listed in
    Community Applications.
@@ -67,11 +64,11 @@ scripts and `php -l` against any PHP before submitting.
 
 ## License
 
-GPLv2, same as upstream.
+GPLv2, same as the original plugin.
 
 Original copyright (C) 2023–2025 Dan Landon.
 
-Fork maintenance copyright (C) 2026 Josh Mans
+Maintenance copyright (C) 2026 Josh Mans
 
 ## Support
 
