@@ -187,7 +187,7 @@ get_domain_backend()
 {
 	# testparm prints the domain name in lower case. Nothing to show when no
 	# domain name is set.
-	domain=$(printf '%s' "$IDMAP_DOMAIN" | tr 'A-Z' 'a-z')
+	domain=$(printf '%s' "$IDMAP_DOMAIN" | tr '[:upper:]' '[:lower:]')
 	if [ -z "$domain" ]; then
 		echo ""
 		return
@@ -200,7 +200,7 @@ get_domain_range()
 {
 	# testparm prints the domain name in lower case. Nothing to show when no
 	# domain name is set.
-	domain=$(printf '%s' "$IDMAP_DOMAIN" | tr 'A-Z' 'a-z')
+	domain=$(printf '%s' "$IDMAP_DOMAIN" | tr '[:upper:]' '[:lower:]')
 	if [ -z "$domain" ]; then
 		echo ""
 		return
