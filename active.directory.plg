@@ -3,12 +3,12 @@
 <!ENTITY name		"active.directory">
 <!ENTITY author		"joshmans">
 <!ENTITY repo		"unraid-active-directory-extras">
-<!ENTITY version	"2026.09.10">
+<!ENTITY version	"2026.09.25">
 <!ENTITY launch		"Settings/SMB">
 <!ENTITY gitURL		"https://raw.githubusercontent.com/&author;/&repo;/main">
 <!ENTITY pluginURL	"&gitURL;/&name;.plg">
 <!ENTITY supportURL	"https://github.com/&author;/&repo;/issues">
-<!ENTITY SHA256		"633eeeed9fc91af6e70e5a2d48a35ae5a7f38da9beb5c81270b00c7a738279e2">
+<!ENTITY SHA256		"2536b1dacc066dab89abfc9fc9a69955446edb43c6e41995f8027ed59fbc8179">
 ]>
 
 <PLUGIN	name="&name;"
