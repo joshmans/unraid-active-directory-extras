@@ -185,9 +185,10 @@ clear_winbind_cache()
 
 get_domain_backend()
 {
-	# testparm prints the domain name in lower case. Nothing to show when no
-	# domain name is set.
-	domain=$(printf '%s' "$IDMAP_DOMAIN" | tr '[:upper:]' '[:lower:]')
+	# The domain's effective idmap setting, whoever configured it (this
+	# plugin, SMB Extras or Unraid): testparm prints the workgroup, and the
+	# domain name inside "idmap config <name>", in lower case.
+	domain=$(/usr/bin/testparm -sv 2>/dev/null | /usr/bin/grep -m1 '^[[:space:]]*workgroup' | /bin/awk '{print tolower($3)}')
 	if [ -z "$domain" ]; then
 		echo ""
 		return
@@ -198,9 +199,10 @@ get_domain_backend()
 
 get_domain_range()
 {
-	# testparm prints the domain name in lower case. Nothing to show when no
-	# domain name is set.
-	domain=$(printf '%s' "$IDMAP_DOMAIN" | tr '[:upper:]' '[:lower:]')
+	# The domain's effective idmap setting, whoever configured it (this
+	# plugin, SMB Extras or Unraid): testparm prints the workgroup, and the
+	# domain name inside "idmap config <name>", in lower case.
+	domain=$(/usr/bin/testparm -sv 2>/dev/null | /usr/bin/grep -m1 '^[[:space:]]*workgroup' | /bin/awk '{print tolower($3)}')
 	if [ -z "$domain" ]; then
 		echo ""
 		return

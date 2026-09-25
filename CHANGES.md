@@ -3,16 +3,18 @@
 ## Unreleased
 - Fix: The Domain Backend Database and Range settings were written for a
   domain literally named `DOMAIN`, which never matches a real domain, so they
-  never took effect: domain users were always mapped with the Backend
-  Database and Range, and winbind logged `Lookup domain name 'domain'
-  failed` at every start. The "Current AD Settings" panel also showed the
-  unused values as if they were active. They now apply only when the new
-  optional **Domain Name** field is set. It is empty by default, so mapping
-  for existing setups does not change (the settings were inert before), the
-  winbind message goes away, the Domain Backend Range is no longer required
-  while it is empty, and the panel says "not used". Setting a name applies
-  the backend and range to that domain; that changes how its users map to
-  UIDs, so it is meant for new setups.
+  never took effect, and winbind logged `Lookup domain name 'domain' failed`
+  at every start. They now apply only when the new optional **Domain Name**
+  field is set. It is empty by default, so existing setups are unchanged
+  (the settings were inert before), the winbind message goes away, and the
+  Domain Backend Range is no longer required while it is empty. When a name
+  is set the lines are read after SMB Extras and override any `idmap config
+  <domain>` there; changing a domain's backend or range changes how its users
+  map to UIDs, so it is meant for new setups.
+- Fix: "Current AD Settings" now shows the domain's effective idmap backend
+  and range as Samba sees them, whoever configured them (this plugin, SMB
+  Extras or Unraid), or "not set". It used to read back the unused `DOMAIN`
+  lines and show them as if they were active.
 - Fix: Remove a stray leading colon rendered next to the Rejoin/Leave
   Domain buttons, and disable the Rejoin button when already joined
   (it remains a no-op refresh of the trust secret while joined, but

@@ -40,16 +40,20 @@ and license terms are preserved.
 
 ### Domain-specific idmap (optional)
 
-By default every domain user is mapped with the **Backend Database** and
-**Backend Range**. The **Domain Backend Database** and **Domain Backend Range**
-apply only if you enter a **Domain Name** (your domain's NetBIOS name, the
-workgroup under Settings → SMB). Leave the name empty to keep the default
-mapping.
+The plugin always writes the default idmap backend and range (`idmap config
+*`). Domain users are mapped by whatever Samba is otherwise configured with
+for your domain: Unraid's own settings, or `idmap config <domain>` lines in
+**SMB Extras**. **Current AD Settings** shows what Samba is actually using.
 
-Entering a name gives that domain its own backend (for example `rid`) and
-range. That changes how its users are mapped to Linux UIDs and GIDs, so files
-already owned by domain users can end up with the wrong owner. Use it on a new
-setup, not on one that already has data owned by domain users.
+The **Domain Backend Database** and **Domain Backend Range** apply only if you
+enter a **Domain Name** (your domain's NetBIOS name, the workgroup under
+Settings → SMB). Leave the name empty unless you need them.
+
+These lines are read after SMB Extras, so they override any `idmap config
+<domain>` set there. Changing a domain's backend or range changes how its
+users are mapped to Linux UIDs and GIDs, so files already owned by domain
+users can end up with the wrong owner. Use it on a new setup, not on one that
+already has data owned by domain users.
 
 Earlier versions wrote these settings for a domain literally named `DOMAIN`,
 which never matched a real domain, so they had no effect.
