@@ -27,7 +27,8 @@ and license terms are preserved.
 
 - Adds a settings section under **Settings → SMB** (visible only when the
   share security mode is set to Active Directory) for tuning:
-  - Domain/default idmap backend and range
+  - Default idmap backend and range, and (optionally) a backend and range
+    for one named domain
   - Idmap positive/negative cache time
   - Winbind cache time
 - Adds `map acl inherit = yes` and `store dos attributes = yes` globally,
@@ -36,6 +37,22 @@ and license terms are preserved.
 - Backs up winbind's `.tdb` databases to the flash drive on shutdown and
   restores them on startup, so AD SID↔UID/GID mappings and cached domain
   state survive a reboot instead of resetting every time.
+
+### Domain-specific idmap (optional)
+
+By default every domain user is mapped with the **Backend Database** and
+**Backend Range**. The **Domain Backend Database** and **Domain Backend Range**
+apply only if you enter a **Domain Name** (your domain's NetBIOS name, the
+workgroup under Settings → SMB). Leave the name empty to keep the default
+mapping.
+
+Entering a name gives that domain its own backend (for example `rid`) and
+range. That changes how its users are mapped to Linux UIDs and GIDs, so files
+already owned by domain users can end up with the wrong owner. Use it on a new
+setup, not on one that already has data owned by domain users.
+
+Earlier versions wrote these settings for a domain literally named `DOMAIN`,
+which never matched a real domain, so they had no effect.
 
 ## Installation
 

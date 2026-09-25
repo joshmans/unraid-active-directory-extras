@@ -162,13 +162,22 @@ $current_domain			= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active
 		// server-side in rc.active.directory's apply_settings(), since a
 		// request could always be POSTed directly to update.php bypassing
 		// this. See AI_REFACTOR_BRIEF.md, section 5, enhancement #2.
+		var domainNameField = document.getElementsByName('IDMAP_DOMAIN')[0];
 		var domainField = document.getElementsByName('IDMAP_DOMAIN_RANGE')[0];
 		var rangeField = document.getElementsByName('IDMAP_RANGE')[0];
+
+		// The domain-specific settings only apply when a domain name is set.
+		var useDomain = domainNameField.value.trim() !== '';
+		if (useDomain && !/^[A-Za-z0-9_-]{1,15}$/.test(domainNameField.value.trim())) {
+			alert(button.getAttribute('data-err-domain'));
+			domainNameField.focus();
+			return false;
+		}
 
 		var domainRange = activeDirectoryExtras_parseRange(domainField.value.trim());
 		var range = activeDirectoryExtras_parseRange(rangeField.value.trim());
 
-		if (!domainRange) {
+		if (useDomain && !domainRange) {
 			alert(button.getAttribute('data-err-domain-range'));
 			domainField.focus();
 			return false;
@@ -178,7 +187,7 @@ $current_domain			= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active
 			rangeField.focus();
 			return false;
 		}
-		if (activeDirectoryExtras_rangesOverlap(domainRange, range)) {
+		if (useDomain && activeDirectoryExtras_rangesOverlap(domainRange, range)) {
 			alert(button.getAttribute('data-err-overlap'));
 			return false;
 		}
@@ -235,6 +244,15 @@ $current_domain			= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active
 <input type="hidden" name="#file" value="active.directory/active.directory.cfg">
 <input type="hidden" name="#command" value="/plugins/active.directory/scripts/rc.active.directory">
 <input type="hidden" name="#arg[1]" value="apply">
+
+_(Domain Name)_ <i>_(optional)_</i>:
+: <input type="text" name="IDMAP_DOMAIN" class="narrow" maxlength="15" value="<?=htmlspecialchars($active_directory_cfg['IDMAP_DOMAIN'] ?? '');?>" placeholder="MYDOMAIN">
+
+:active_directory_domain_name_plug:
+> Leave this empty (the default) to keep Samba's default mapping: every domain user is mapped with the Backend Database and Backend Range below, and the Domain Backend settings that follow are not used.
+>
+> Enter your domain's NetBIOS name (the workgroup shown under Settings &rarr; SMB, e.g. MYDOMAIN) to give that domain its own Domain Backend Database and Range. **Only do this on a new setup.** It changes how the domain's users are mapped to Linux UIDs and GIDs, so files already owned by domain users can end up owned by the wrong IDs.
+:end
 
 _(Domain Backend Database)_
 : <select name="IDMAP_DOMAIN_BACKEND" size="1">
@@ -323,7 +341,7 @@ _(TDB Backup Path)_:
 :end
 
 <input type="submit" name="#default" value="_(Default)_">
-: <input type="submit" name="#apply" value="_(Apply)_" data-err-domain-range="_(Domain Backend Range must be in the format low-high, e.g. 100000-199999, with low less than high.)_" data-err-range="_(Backend Range must be in the format low-high, e.g. 10000-99999, with low less than high.)_" data-err-overlap="_(Domain Backend Range and Backend Range must not overlap.)_" onclick="return activeDirectoryExtras_validateRanges(this);"><input type="button" value="_(Done)_" onclick="done()">
+: <input type="submit" name="#apply" value="_(Apply)_" data-err-domain="_(Domain Name may only contain letters, digits, - and _ (up to 15 characters), or be left empty.)_" data-err-domain-range="_(Domain Backend Range must be in the format low-high, e.g. 100000-199999, with low less than high.)_" data-err-range="_(Backend Range must be in the format low-high, e.g. 10000-99999, with low less than high.)_" data-err-overlap="_(Domain Backend Range and Backend Range must not overlap.)_" onclick="return activeDirectoryExtras_validateRanges(this);"><input type="button" value="_(Done)_" onclick="done()">
 <u><a href='https://www.samba.org/~ab/output/htmldocs/Samba3-HOWTO/idmapper.html', target='_blank'>Samba idmap documentation</a></u>
 </form>
 
@@ -341,8 +359,8 @@ _(Click on 'Help' for more information)_.
 <div>
 	<div style="width: 25%; float:right">
 		<p><u>_(Current AD Settings)_</u></p>
-		<p>_(Domain Backend Database)_: <?=$idmap_domain_backend?></p>
-		<p>_(Domain Backend Range)_: <?=$idmap_domain_range?></p>
+		<p>_(Domain Backend Database)_: <?=$idmap_domain_backend !== '' ? htmlspecialchars($idmap_domain_backend) : 'not used'?></p>
+		<p>_(Domain Backend Range)_: <?=$idmap_domain_range !== '' ? htmlspecialchars($idmap_domain_range) : 'not used'?></p>
 		<p>_(Backend Database)_: <?=$idmap_backend?></p>
 		<p>_(Backend Range)_: <?=$idmap_range?></p>
 		<p>_(Idmap Cache Time)_: <?=$idmap_cache_time?></p>
