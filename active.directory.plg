@@ -22,12 +22,19 @@
 		max="7.4.0">
 
 <CHANGES>
+###2026.09.25a
+- Fix: "Current AD Settings" shows the domain's effective idmap backend and
+  range as Samba sees them (whoever configured them), or "not set".
+- Fix: Corrected the Domain Name help text: domain users are mapped by
+  whatever Samba is otherwise configured with; a name set here overrides any
+  idmap config for that domain in SMB Extras.
+
 ###2026.09.25
 - Fix: The Domain Backend Database/Range settings were written for a domain
   literally named DOMAIN, so they never took effect and winbind logged
   "Lookup domain name 'domain' failed" at every start. They now apply only
   when the new optional Domain Name field is set (empty by default, so
-  existing setups map exactly as before and the message goes away).
+  existing setups are unchanged and the message goes away).
 
 ###2026.09.10
 - Fix: Remove stray leading colon next to Rejoin/Leave Domain buttons;

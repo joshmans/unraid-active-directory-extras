@@ -249,9 +249,9 @@ _(Domain Name)_ <i>_(optional)_</i>:
 : <input type="text" name="IDMAP_DOMAIN" class="narrow" maxlength="15" value="<?=htmlspecialchars($active_directory_cfg['IDMAP_DOMAIN'] ?? '');?>" placeholder="MYDOMAIN">
 
 :active_directory_domain_name_plug:
-> Leave this empty (the default) to keep Samba's default mapping: every domain user is mapped with the Backend Database and Backend Range below, and the Domain Backend settings that follow are not used.
+> Leave this empty (the default) and the Domain Backend settings that follow are not used. Domain users are then mapped by whatever Samba is otherwise configured with for your domain (Unraid's own settings, or idmap config lines in SMB Extras). "Current AD Settings" shows what Samba is actually using.
 >
-> Enter your domain's NetBIOS name (the workgroup shown under Settings &rarr; SMB, e.g. MYDOMAIN) to give that domain its own Domain Backend Database and Range. **Only do this on a new setup.** It changes how the domain's users are mapped to Linux UIDs and GIDs, so files already owned by domain users can end up owned by the wrong IDs.
+> Enter your domain's NetBIOS name (the workgroup shown under Settings &rarr; SMB, e.g. MYDOMAIN) to have this plugin write a Domain Backend Database and Range for that domain. They are read after SMB Extras, so they override any idmap config for the same domain there. **Changing a domain's backend or range changes how its users are mapped to Linux UIDs and GIDs**, so files already owned by domain users can end up owned by the wrong IDs. Only do this on a new setup.
 :end
 
 _(Domain Backend Database)_
@@ -359,8 +359,8 @@ _(Click on 'Help' for more information)_.
 <div>
 	<div style="width: 25%; float:right">
 		<p><u>_(Current AD Settings)_</u></p>
-		<p>_(Domain Backend Database)_: <?=$idmap_domain_backend !== '' ? htmlspecialchars($idmap_domain_backend) : 'not used'?></p>
-		<p>_(Domain Backend Range)_: <?=$idmap_domain_range !== '' ? htmlspecialchars($idmap_domain_range) : 'not used'?></p>
+		<p>_(Domain Backend Database)_: <?=$idmap_domain_backend !== '' ? htmlspecialchars($idmap_domain_backend) : 'not set'?></p>
+		<p>_(Domain Backend Range)_: <?=$idmap_domain_range !== '' ? htmlspecialchars($idmap_domain_range) : 'not set'?></p>
 		<p>_(Backend Database)_: <?=$idmap_backend?></p>
 		<p>_(Backend Range)_: <?=$idmap_range?></p>
 		<p>_(Idmap Cache Time)_: <?=$idmap_cache_time?></p>
