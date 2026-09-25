@@ -42,10 +42,25 @@ apply_settings()
 	# check below (see AI_REFACTOR_BRIEF.md section 4, bug #4) so an
 	# invalid range shows up in the webGUI's progress frame instead of
 	# failing silently.
-	if ! validate_range "$IDMAP_DOMAIN_RANGE"; then
-		logger "Error: invalid IDMAP_DOMAIN_RANGE '$IDMAP_DOMAIN_RANGE'." -t$PROG_NAME
-		echo "Error: Domain Backend Range '$IDMAP_DOMAIN_RANGE' is invalid. Expected format: low-high (e.g. 100000-199999), with low less than high. Settings were not applied."
-		return 1
+	# The domain-specific idmap settings only apply when a domain name is set.
+	# They used to be written for a domain literally named "DOMAIN", which never
+	# matches a real domain, so they never took effect (and winbind logged
+	# "Lookup domain name 'domain' failed" at every start). Empty, the default,
+	# keeps the mapping exactly as it already was in practice: the default
+	# backend below. Setting a name makes the backend and range really apply to
+	# that domain, which changes how its users map to UIDs.
+	if [ -n "$IDMAP_DOMAIN" ]; then
+		if [[ ! "$IDMAP_DOMAIN" =~ ^[A-Za-z0-9_-]{1,15}$ ]]; then
+			logger "Error: invalid IDMAP_DOMAIN." -t$PROG_NAME
+			echo "Error: Domain Name is invalid. Use up to 15 letters, digits, '-' or '_', or leave it empty. Settings were not applied."
+			return 1
+		fi
+
+		if ! validate_range "$IDMAP_DOMAIN_RANGE"; then
+			logger "Error: invalid IDMAP_DOMAIN_RANGE '$IDMAP_DOMAIN_RANGE'." -t$PROG_NAME
+			echo "Error: Domain Backend Range '$IDMAP_DOMAIN_RANGE' is invalid. Expected format: low-high (e.g. 100000-199999), with low less than high. Settings were not applied."
+			return 1
+		fi
 	fi
 
 	if ! validate_range "$IDMAP_RANGE"; then
@@ -54,7 +69,7 @@ apply_settings()
 		return 1
 	fi
 
-	if ranges_overlap "$IDMAP_DOMAIN_RANGE" "$IDMAP_RANGE"; then
+	if [ -n "$IDMAP_DOMAIN" ] && ranges_overlap "$IDMAP_DOMAIN_RANGE" "$IDMAP_RANGE"; then
 		logger "Error: IDMAP_DOMAIN_RANGE and IDMAP_RANGE overlap." -t$PROG_NAME
 		echo "Error: Domain Backend Range ($IDMAP_DOMAIN_RANGE) and Backend Range ($IDMAP_RANGE) must not overlap. Settings were not applied."
 		return 1
@@ -78,9 +93,14 @@ apply_settings()
 	> /etc/samba/smb-active.directory.conf
 
 	# Configuration settings as an array of strings
-	config_entries=(
-		"idmap config DOMAIN : backend = $IDMAP_DOMAIN_BACKEND"
-		"idmap config DOMAIN : range = $IDMAP_DOMAIN_RANGE"
+	config_entries=()
+	if [ -n "$IDMAP_DOMAIN" ]; then
+		config_entries+=(
+			"idmap config $IDMAP_DOMAIN : backend = $IDMAP_DOMAIN_BACKEND"
+			"idmap config $IDMAP_DOMAIN : range = $IDMAP_DOMAIN_RANGE"
+		)
+	fi
+	config_entries+=(
 		"idmap config * : backend = $IDMAP_BACKEND"
 		"idmap config * : range = $IDMAP_RANGE"
 		"idmap cache time = $IDMAP_CACHE_TIME"
@@ -165,13 +185,27 @@ clear_winbind_cache()
 
 get_domain_backend()
 {
-	value=`/usr/bin/testparm -vs 2>/dev/null | tr '*' ' ' | /usr/bin/grep 'idmap config domain' | /usr/bin/grep 'backend' | /bin/awk '{print $7}'`
+	# testparm prints the domain name in lower case. Nothing to show when no
+	# domain name is set.
+	domain=$(printf '%s' "$IDMAP_DOMAIN" | tr '[:upper:]' '[:lower:]')
+	if [ -z "$domain" ]; then
+		echo ""
+		return
+	fi
+	value=`/usr/bin/testparm -vs 2>/dev/null | tr '*' ' ' | /usr/bin/grep -F "idmap config $domain :" | /usr/bin/grep 'backend' | /bin/awk '{print $7}'`
 	echo "$value"
 }
 
 get_domain_range()
 {
-	value=`/usr/bin/testparm -vs 2>/dev/null | tr '*' ' ' | /usr/bin/grep 'idmap config domain' | /usr/bin/grep 'range' | /bin/awk '{print $7}'`
+	# testparm prints the domain name in lower case. Nothing to show when no
+	# domain name is set.
+	domain=$(printf '%s' "$IDMAP_DOMAIN" | tr '[:upper:]' '[:lower:]')
+	if [ -z "$domain" ]; then
+		echo ""
+		return
+	fi
+	value=`/usr/bin/testparm -vs 2>/dev/null | tr '*' ' ' | /usr/bin/grep -F "idmap config $domain :" | /usr/bin/grep 'range' | /bin/awk '{print $7}'`
 	echo "$value"
 }
 
