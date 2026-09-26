@@ -24,17 +24,17 @@ TDB_BACKUP_PATH_DEFAULT="/boot/config/plugins/active.directory/database"
 CONFIG="/boot/config/plugins/active.directory/active.directory.cfg"
 TDB_DEST="/var/lib/samba"
 
-if [ -f "$CONFIG" ]; then
-	# shellcheck disable=SC1090
-	source "$CONFIG"
-fi
+SCRIPT_DIR=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
+# shellcheck source=common.sh
+source "$SCRIPT_DIR/common.sh"
 
-if [ -z "$TDB_BACKUP_PATH" ] || [[ "$TDB_BACKUP_PATH" == *".."* ]] || [[ ! "$TDB_BACKUP_PATH" =~ ^/(boot|mnt)/[A-Za-z0-9_./-]+$ ]]; then
-	if [ -n "$TDB_BACKUP_PATH" ]; then
-		logger "active.directory: invalid TDB_BACKUP_PATH '$TDB_BACKUP_PATH', falling back to default." -t active.directory
-	fi
-	TDB_BACKUP_PATH="$TDB_BACKUP_PATH_DEFAULT"
-fi
+# The settings are read, not sourced: see load_cfg in common.sh.
+load_cfg "$CONFIG"
+
+
+# Only a folder that root owns and nobody else can write to is used (see tdb_backup_dir in common.sh);
+# anything else falls back to the default on the flash drive.
+TDB_BACKUP_PATH=$(tdb_backup_dir "$TDB_BACKUP_PATH" )
 
 TDB_SOURCE="$TDB_BACKUP_PATH"
 
@@ -72,6 +72,10 @@ while IFS= read -r base; do
 
 	valid_file=""
 	for candidate in "${generations[@]}"; do
+		if ! tdb_file_ok "$candidate"; then
+			logger "active.directory: ignoring $candidate: not a regular file owned by root." -t active.directory
+			continue
+		fi
 		if tdbtool "$candidate" check >/dev/null 2>&1; then
 			valid_file="$candidate"
 			break

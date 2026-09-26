@@ -1,6 +1,33 @@
 # Changelog
 
 ## Unreleased
+- Security: The Rejoin and Leave Domain password no longer goes through Unraid's
+  `/update.php`, which writes every argument of a command to the syslog (and
+  syslog ends up in diagnostics that people post on forums); base64 only hid it
+  from a casual glance. The page now sends it in the body of a POST to
+  `include/join_leave.php`, which hands it to `net` on stdin: it is never a
+  command-line argument and never logged. The `ad_join` and `ad_leave` commands
+  of `rc.active.directory` (which took the password as an argument) are removed.
+- Security: The TDB backup folder is now only used if it is a real folder owned
+  by root that group and others cannot write to, and only root-owned regular
+  files are restored. The backups are restored as root at boot, so a folder
+  that other users can write to (such as one inside an SMB share) could be used
+  to plant a crafted idmap database (for example one that maps a domain user to
+  UID 0). Anything else falls back to the default folder on the flash drive and
+  logs a line; a folder the plugin creates is private to root, and a planted
+  link at a backup file's temporary name is no longer followed.
+- Security: The settings file is now read instead of sourced. `update.php`
+  writes `KEY="value"` without escaping, so a value such as `$(command)` typed
+  into a field was run as root every time settings were applied and at every
+  boot and shutdown. Only the known keys are read and unsafe values are ignored.
+  Backend and cache-time values are validated before they are written into the
+  Samba configuration (a line break in one could have added arbitrary Samba
+  settings).
+- Fix: The values shown under "Current AD Settings" are HTML-escaped.
+- Fix: The join check on the page is bounded to 15 seconds, so an unreachable
+  domain controller can no longer keep the page from loading.
+- Fix: `config_vfs` writes `smb-shares.conf` through a temporary file and a
+  rename, so an interrupted write cannot leave it truncated.
 - Fix: "Backend Database" and "Backend Range" under "Current AD Settings"
   showed a stray `=` line above the real value whenever a Domain Name idmap
   was configured. The default-domain lookup matched every `idmap config`

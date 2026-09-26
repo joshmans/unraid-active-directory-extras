@@ -58,6 +58,12 @@ already has data owned by domain users.
 Earlier versions wrote these settings for a domain literally named `DOMAIN`,
 which never matched a real domain, so they had no effect.
 
+## Security notes
+
+- **The Rejoin / Leave Domain password** is sent to the plugin's own endpoint and handed to `net` on stdin. It is never a command-line argument and never written to a log. (Older versions passed it through Unraid's `/update.php`, which writes every argument of the command to the syslog.)
+- **TDB backups are restored as root at boot**, so the backup folder must be one only root can write to. A folder that is not owned by root, or that group or others can write to (for example one inside a writable SMB share), is not used: the default folder on the flash drive is used instead and a line is logged. The default location is the safest choice; the flash drive is only accessible to root.
+- **The settings file is read, not executed.** Only the plugin's own keys are read and values containing quotes, `$`, backticks or line breaks are ignored.
+
 ## Installation
 
 1. In Unraid, go to **Plugins → Install Plugin** and paste:

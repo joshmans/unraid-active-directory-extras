@@ -63,6 +63,24 @@ apply_settings()
 		fi
 	fi
 
+	# Everything below ends up in a Samba config file, so each value has to be a plain word or number:
+	# a value with a line break in it would otherwise add whole extra lines (any Samba setting) to it.
+	local v
+	for v in "$IDMAP_BACKEND" "$IDMAP_DOMAIN_BACKEND"; do
+		if [[ ! "$v" =~ ^[a-z0-9_]{1,20}$ ]]; then
+			logger "Error: invalid idmap backend." -t$PROG_NAME
+			echo "Error: an idmap backend value is invalid (letters, digits and _ only). Settings were not applied."
+			return 1
+		fi
+	done
+	for v in "$IDMAP_CACHE_TIME" "$IDMAP_NEGATIVE_CACHE_TIME" "$WINBIND_CACHE_TIME"; do
+		if [[ ! "$v" =~ ^[0-9]{1,9}$ ]]; then
+			logger "Error: invalid cache time." -t$PROG_NAME
+			echo "Error: a cache time is invalid (digits only). Settings were not applied."
+			return 1
+		fi
+	done
+
 	if ! validate_range "$IDMAP_RANGE"; then
 		logger "Error: invalid IDMAP_RANGE '$IDMAP_RANGE'." -t$PROG_NAME
 		echo "Error: Backend Range '$IDMAP_RANGE' is invalid. Expected format: low-high (e.g. 10000-99999), with low less than high. Settings were not applied."
@@ -312,11 +330,15 @@ get_join_status()
 	# Output is "STATUS|DETAIL" (pipe-delimited) so the page can style
 	# the status word and show the raw diagnostic text separately,
 	# rather than always dumping the raw error text inline.
-	testjoin_output=`/usr/bin/net ads testjoin 2>&1`
+	# This runs every time the page is opened, so it is bounded: with no domain controller answering, an
+	# unbounded call could keep the page from loading for as long as net's own timeouts add up to.
+	testjoin_output=`/usr/bin/timeout 15 /usr/bin/net ads testjoin 2>&1`
 	testjoin_status=$?
 
 	if [ $testjoin_status -eq 0 ]; then
 		echo "Joined|"
+	elif [ $testjoin_status -eq 124 ]; then
+		echo "Not joined|The domain did not answer within 15 seconds."
 	else
 		echo "Not joined|$testjoin_output"
 	fi
@@ -332,92 +354,6 @@ get_current_domain()
 	echo "$value"
 }
 
-ad_join()
-{
-	# Join/rejoin AD directly via net ads join, without touching the array
-	# or smb.conf's security mode - see BUGS_FOUND.md #2 and #3 (Unraid's
-	# stock Join button stops the array unconditionally, even for a plain
-	# rejoin, and its Join/Leave button states are driven by the same
-	# unreliable join-status detection this fork already works around).
-	# Only meaningful when the security mode is already 'ads' (this
-	# page's own Cond already guarantees that), so Domain/Realm/Workgroup
-	# are already configured in smb.conf from whenever the mode was
-	# originally set - we don't need to collect them again here.
-	local login="$1"
-	# $2 arrives base64-encoded from the page's JS - see BUGS_FOUND.md #4:
-	# Unraid's own /update.php dispatcher logs every #arg[] value to
-	# syslog in cleartext before this script even runs, which we can't
-	# prevent directly. This decode step exists purely to avoid the
-	# literal plaintext password appearing in that log line - it is
-	# obfuscation, not real security.
-	local password
-	password=$(printf '%s' "$2" | base64 -d 2>/dev/null)
-
-	if [ -z "$login" ] || [ -z "$password" ]; then
-		echo "Error: Login and password are required to join."
-		return 1
-	fi
-
-	# Pass the password via stdin rather than -U login%password. Confirmed
-	# empirically (not documented behavior - the net(8) manpage and older
-	# mailing-list reports suggested this wasn't possible) that net ads
-	# join/leave silently consumes a piped password instead of prompting.
-	# This keeps the plaintext password out of the process's argv
-	# entirely, so it never appears in `ps`/`/proc/<pid>/cmdline` to any
-	# other process on the system - closing the one gap the base64
-	# syslog obfuscation above doesn't address. Uses printf | pipe, not a
-	# bash herestring (<<<), since herestrings are backed by a temp file
-	# on some bash versions and would reintroduce plaintext-on-disk
-	# exposure instead.
-	join_output=$(printf '%s\n' "$password" | /usr/bin/net ads join -U "$login" 2>&1)
-	join_status=$?
-
-	if [ $join_status -eq 0 ]; then
-		/usr/bin/net cache flush
-		/usr/bin/smbcontrol "$(cat /var/run/smbd.pid 2>/dev/null)" reload-config 2>&1
-		echo "Successfully joined the domain. Array and Samba were not restarted."
-	else
-		# Never log the raw net command output to syslog - in some failure
-		# modes it can echo back more diagnostic detail than expected.
-		# Full detail goes to the browser (this request only), never to
-		# a persisted system log.
-		logger "Error: net ads join failed (see webGUI for detail)." -t$PROG_NAME
-		echo "Error: Failed to join the domain. $join_output"
-		return 1
-	fi
-}
-
-ad_leave()
-{
-	# Leave AD directly via net ads leave, without touching the array or
-	# smb.conf's security mode - see BUGS_FOUND.md #2 and #3.
-	local login="$1"
-	# $2 arrives base64-encoded from the page's JS - see BUGS_FOUND.md #4
-	# (obfuscation only, not real security - see ad_join for detail).
-	local password
-	password=$(printf '%s' "$2" | base64 -d 2>/dev/null)
-
-	if [ -z "$login" ] || [ -z "$password" ]; then
-		echo "Error: Login and password are required to leave."
-		return 1
-	fi
-
-	# See ad_join for why this is piped via stdin instead of -U
-	# login%password - keeps the plaintext password out of argv/ps.
-	leave_output=$(printf '%s\n' "$password" | /usr/bin/net ads leave -U "$login" 2>&1)
-	leave_status=$?
-
-	if [ $leave_status -eq 0 ]; then
-		/usr/bin/net cache flush
-		/usr/bin/smbcontrol "$(cat /var/run/smbd.pid 2>/dev/null)" reload-config 2>&1
-		echo "Successfully left the domain. Array and Samba were not restarted."
-	else
-		logger "Error: net ads leave failed (see webGUI for detail)." -t$PROG_NAME
-		echo "Error: Failed to leave the domain. $leave_output"
-		return 1
-	fi
-}
-
 DOCROOT=`/usr/bin/grep -Po '^chdir = \K.*' /etc/php-fpm.d/www.conf`
 if [ -z ${DOCROOT} ];then
 	DOCROOT="/usr/local/emhttp"
@@ -426,8 +362,20 @@ fi
 # read our configuration.
 plugin="active.directory"
 CONFIG="/boot/config/plugins/${plugin}/${plugin}.cfg"
-# shellcheck disable=SC1090
-source $CONFIG
+# The settings are read, not sourced: update.php writes them without escaping, so sourcing would run
+# anything typed into a field as root. See load_cfg in common.sh.
+SCRIPT_DIR=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
+# shellcheck source=common.sh
+source "$SCRIPT_DIR/common.sh"
+load_cfg "$CONFIG"
+
+# Set default backends if blank (or ignored by load_cfg because the value was not safe)
+if [ "$IDMAP_BACKEND" = "" ]; then
+	IDMAP_BACKEND="tdb"
+fi
+if [ "$IDMAP_DOMAIN_BACKEND" = "" ]; then
+	IDMAP_DOMAIN_BACKEND="rid"
+fi
 
 # Set default IDMAP_DOMAIN_RANGE if blank in settings
 if [ "$IDMAP_DOMAIN_RANGE" = "" ]; then
@@ -490,12 +438,6 @@ case "$1" in
 	'current_domain')
 		get_current_domain
 	;;
-	'ad_join')
-		ad_join "$2" "$3"
-	;;
-	'ad_leave')
-		ad_leave "$2" "$3"
-	;;
 	*)
-		echo "usage $0 apply|clear_cache|domain_backend|domain_range|backend|range|winbind_cache|idmap_cache|idmap_neg_cache|join_status|current_domain|ad_join|ad_leave"
+		echo "usage $0 apply|clear_cache|domain_backend|domain_range|backend|range|winbind_cache|idmap_cache|idmap_neg_cache|join_status|current_domain"
 esac
