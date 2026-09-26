@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Fix: "Backend Database" and "Backend Range" under "Current AD Settings"
+  showed a stray `=` line above the real value whenever a Domain Name idmap
+  was configured. The default-domain lookup matched every `idmap config`
+  line instead of only the `*` (default) one; it now matches only the default.
 - Fix: The Domain Backend Database and Range settings were written for a
   domain literally named `DOMAIN`, which never matches a real domain, so they
   never took effect, and winbind logged `Lookup domain name 'domain' failed`
