@@ -214,25 +214,23 @@ $current_domain			= exec( "plugins/".ACTIVE_DIRECTORY_PLUGIN."/scripts/rc.active
 	<p>
 	<b>_(Rejoin domain)_:</b> <?=htmlspecialchars($current_domain)?>
 	</p>
-	<form name="ad_join_leave" method="POST" action="/update.php" target="progressFrame">
-		<input type="hidden" name="#command" value="/plugins/active.directory/scripts/rc.active.directory">
-		<input type="hidden" id="ad_join_leave_action" name="#arg[1]" value="ad_join">
+	<form name="ad_join_leave" onsubmit="return false;" autocomplete="off">
 		_(AD account login)_ <i>_(required for both Rejoin and Leave)_</i>:
-		: <input type="text" id="ad_join_leave_login" name="#arg[2]" maxlength="40" autocomplete="off">
+		: <input type="text" id="ad_join_leave_login" maxlength="40" autocomplete="off">
 		_(AD account password)_:
-		: <input type="password" id="ad_join_leave_password_visible" maxlength="40" autocomplete="off">
-		  <input type="hidden" id="ad_join_leave_password_encoded" name="#arg[3]" value="">
+		: <input type="password" id="ad_join_leave_password" maxlength="40" autocomplete="off">
 		&nbsp;
 		<span class="inline-block">
 			<span title="_(This refreshes the domain trust directly and does not stop the array or restart Samba, unlike Unraid's built-in Join button)_.">
-				<input type="submit" value="_(Rejoin)_" <?=$join_is_ok ? 'disabled' : ''?> onclick="activeDirectoryExtras_prepareJoinLeaveSubmit('ad_join');">
+				<input type="button" id="ad_rejoin_button" value="_(Rejoin)_" <?=$join_is_ok ? 'disabled' : ''?> onclick="activeDirectoryExtras_joinLeave('join');">
 			</span>
 			<?if ($join_is_ok):?>
-			<input type="submit" value="_(Leave Domain)_" onclick="activeDirectoryExtras_prepareJoinLeaveSubmit('ad_leave'); return confirm('_(Are you sure you want to leave the domain? This uses the login and password entered above.)_');">
+			<input type="button" id="ad_leave_button" value="_(Leave Domain)_" onclick="if (confirm('_(Are you sure you want to leave the domain? This uses the login and password entered above.)_')) { activeDirectoryExtras_joinLeave('leave'); }">
 			<?else:?>
 			<a href="#" onclick="activeDirectoryExtras_revealJoinOps(); return false;" style="margin-left:8px;">_(Change Domain)_ &rarr;</a>
 			<?endif;?>
 		  </span>
+		<div id="ad_join_leave_result" role="status" style="margin-top:8px"></div>
 	</form>
 	<p>
 	_(When you change a backend database, you will lose your permission settings and you'll have to re-enter them)_.  _(AD permissions are persistent after a reboot)_.
@@ -338,6 +336,14 @@ _(TDB Backup Path)_:
 > Changing this does not move existing backups from the previous
 > location - they are left in place, and a fresh set of backups will
 > start accumulating at the new location.
+>
+> **Only root should be able to write there.** The backups are restored as
+> root at every boot, so a folder that other users can write to (for example
+> one inside an SMB share that other users can write to) could be used to slip
+> in a crafted idmap database. A folder that is not owned by root, or that
+> group or others can write to, is not used: the backups go to the default
+> location on the flash drive instead, and a line is written to the syslog.
+> A folder this plugin creates itself is private to root.
 :end
 
 <input type="submit" name="#default" value="_(Default)_">
@@ -361,11 +367,11 @@ _(Click on 'Help' for more information)_.
 		<p><u>_(Current AD Settings)_</u></p>
 		<p>_(Domain Backend Database)_: <?=$idmap_domain_backend !== '' ? htmlspecialchars($idmap_domain_backend) : 'not set'?></p>
 		<p>_(Domain Backend Range)_: <?=$idmap_domain_range !== '' ? htmlspecialchars($idmap_domain_range) : 'not set'?></p>
-		<p>_(Backend Database)_: <?=$idmap_backend?></p>
-		<p>_(Backend Range)_: <?=$idmap_range?></p>
-		<p>_(Idmap Cache Time)_: <?=$idmap_cache_time?></p>
-		<p>_(Idmap Negative Cache Time)_: <?=$idmap_neg_cache_time?></p>
-		<p>_(Winbind Cache Time)_: <?=$winbind_cache_time?></p>
+		<p>_(Backend Database)_: <?=htmlspecialchars($idmap_backend)?></p>
+		<p>_(Backend Range)_: <?=htmlspecialchars($idmap_range)?></p>
+		<p>_(Idmap Cache Time)_: <?=htmlspecialchars($idmap_cache_time)?></p>
+		<p>_(Idmap Negative Cache Time)_: <?=htmlspecialchars($idmap_neg_cache_time)?></p>
+		<p>_(Winbind Cache Time)_: <?=htmlspecialchars($winbind_cache_time)?></p>
 	</div>
 </div>
 
@@ -417,26 +423,45 @@ function activeDirectoryExtras_revealJoinOps() {
     }
 }
 
-function activeDirectoryExtras_prepareJoinLeaveSubmit(action) {
-    var actionField = document.getElementById('ad_join_leave_action');
-    if (actionField) {
-        actionField.value = action;
+function activeDirectoryExtras_joinLeave(action) {
+    // The password is sent in the body of a POST to this plugin's own endpoint and handed to `net` on stdin.
+    // It used to go through Unraid's /update.php as a command argument (base64-encoded), and update.php writes
+    // every argument of the command it runs to the syslog, which ends up in diagnostics people post on forums.
+    var login = document.getElementById('ad_join_leave_login');
+    var pass = document.getElementById('ad_join_leave_password');
+    var out = document.getElementById('ad_join_leave_result');
+    var buttons = [document.getElementById('ad_rejoin_button'), document.getElementById('ad_leave_button')];
+    if (!login || !pass || !out) {
+        return;
     }
-
-    // Obfuscate (not encrypt) the password before it becomes part of the
-    // command Unraid's own /update.php dispatcher logs to syslog in
-    // cleartext - see BUGS_FOUND.md #4. This is not real security (base64
-    // is trivially reversible), but it does stop the literal plaintext
-    // password from appearing in a log a human might glance at or share
-    // for troubleshooting. Decoded server-side in rc.active.directory.
-    var visibleField = document.getElementById('ad_join_leave_password_visible');
-    var encodedField = document.getElementById('ad_join_leave_password_encoded');
-    if (visibleField && encodedField) {
-        // UTF-8 safe encoding - plain btoa() throws on non-ASCII characters,
-        // which would otherwise hard-fail this feature for any password
-        // containing them.
-        encodedField.value = btoa(unescape(encodeURIComponent(visibleField.value)));
+    if (!login.value.trim() || !pass.value) {
+        out.textContent = "_(Login and password are required.)_";
+        return;
     }
+    var body = new URLSearchParams();
+    body.set('csrf_token', typeof csrf_token !== 'undefined' ? csrf_token : '');
+    body.set('action', action);
+    body.set('login', login.value.trim());
+    body.set('password', pass.value);
+    pass.value = '';
+    out.textContent = action === 'join' ? "_(Rejoining the domain...)_" : "_(Leaving the domain...)_";
+    buttons.forEach(function (b) { if (b) { b.disabled = true; } });
+    fetch('/plugins/active.directory/include/join_leave.php', { method: 'POST', body: body, credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            out.textContent = res.message || res.error || '';
+            out.style.color = res.ok ? '#5cb85c' : '#d9534f';
+            if (res.ok) {
+                setTimeout(function () { location.reload(); }, 2000);
+            } else {
+                buttons.forEach(function (b) { if (b) { b.disabled = false; } });
+            }
+        })
+        .catch(function () {
+            out.textContent = "_(The request failed. Reload the page and try again.)_";
+            out.style.color = '#d9534f';
+            buttons.forEach(function (b) { if (b) { b.disabled = false; } });
+        });
 }
 </script>
 <?endif;?>

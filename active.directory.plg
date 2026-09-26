@@ -3,12 +3,12 @@
 <!ENTITY name		"active.directory">
 <!ENTITY author		"joshmans">
 <!ENTITY repo		"unraid-active-directory-extras">
-<!ENTITY version	"2026.09.26">
+<!ENTITY version	"2026.09.26a">
 <!ENTITY launch		"Settings/SMB">
 <!ENTITY gitURL		"https://raw.githubusercontent.com/&author;/&repo;/main">
 <!ENTITY pluginURL	"&gitURL;/&name;.plg">
 <!ENTITY supportURL	"https://github.com/&author;/&repo;/issues">
-<!ENTITY SHA256		"c88a6b7c3ae59f728e24070e9fbd867d28fd9d61c4faa82efb503ebd196e2c30">
+<!ENTITY SHA256		"0482a9fae90bb0ba18f21dc4be7ad3d37302b9f9c089c4b2437f7e4027889894">
 ]>
 
 <PLUGIN	name="&name;"
@@ -22,6 +22,23 @@
 		max="7.4.0">
 
 <CHANGES>
+###2026.09.26a
+- Security: The Rejoin/Leave Domain password is no longer sent through Unraid's
+  update.php, which logs every command argument to the syslog. It is POSTed to
+  the plugin's own endpoint and given to `net` on stdin: never an argument,
+  never logged. The ad_join/ad_leave commands are removed from
+  rc.active.directory.
+- Security: The TDB backup folder is only used if it is owned by root and not
+  writable by group or others (else the flash-drive default is used), and only
+  root-owned regular files are restored: a folder inside a writable SMB share
+  could otherwise be used to plant a crafted idmap database that is restored as
+  root at boot.
+- Security: The settings file is read, not sourced, so a value like $(command)
+  in a field is no longer run as root; backend and cache-time values are
+  validated before they reach the Samba config.
+- Fix: Values under "Current AD Settings" are HTML-escaped; the join check on
+  the page times out after 15 seconds; smb-shares.conf is written atomically.
+
 ###2026.09.26
 - Fix: "Backend Database" and "Backend Range" under "Current AD Settings"
   showed a stray "=" above the real value when a Domain Name idmap was
