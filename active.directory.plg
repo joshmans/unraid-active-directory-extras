@@ -3,12 +3,12 @@
 <!ENTITY name		"active.directory">
 <!ENTITY author		"joshmans">
 <!ENTITY repo		"unraid-active-directory-extras">
-<!ENTITY version	"2026.09.25a">
+<!ENTITY version	"2026.09.26">
 <!ENTITY launch		"Settings/SMB">
 <!ENTITY gitURL		"https://raw.githubusercontent.com/&author;/&repo;/main">
 <!ENTITY pluginURL	"&gitURL;/&name;.plg">
 <!ENTITY supportURL	"https://github.com/&author;/&repo;/issues">
-<!ENTITY SHA256		"ad66cb70192e0c190891d41cb0106c7a90f7f75b13a0339769f7ce6cf4aab804">
+<!ENTITY SHA256		"c88a6b7c3ae59f728e24070e9fbd867d28fd9d61c4faa82efb503ebd196e2c30">
 ]>
 
 <PLUGIN	name="&name;"
@@ -22,6 +22,11 @@
 		max="7.4.0">
 
 <CHANGES>
+###2026.09.26
+- Fix: "Backend Database" and "Backend Range" under "Current AD Settings"
+  showed a stray "=" above the real value when a Domain Name idmap was
+  configured (the default-domain lookup also matched the named domain's line).
+
 ###2026.09.25a
 - Fix: "Current AD Settings" shows the domain's effective idmap backend and
   range as Samba sees them (whoever configured them), or "not set".

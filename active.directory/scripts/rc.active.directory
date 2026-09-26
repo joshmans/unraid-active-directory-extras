@@ -213,13 +213,17 @@ get_domain_range()
 
 get_backend()
 {
-	value=`/usr/bin/testparm -vs 2>/dev/null | tr '*' ' ' | /usr/bin/grep 'idmap config *' | /usr/bin/grep 'backend' | /bin/awk '{print $6}'`
+	# The default ("*") domain only. The old pattern, 'idmap config *', is a
+	# regex meaning "idmap config" followed by anything, so it also matched a
+	# named domain's line and its field 6 is the "=" that was shown.
+	value=`/usr/bin/testparm -vs 2>/dev/null | /usr/bin/grep -F 'idmap config * :' | /usr/bin/grep 'backend' | /bin/awk '{print $NF}'`
 	echo "$value"
 }
 
 get_range()
 {
-	value=`/usr/bin/testparm -vs 2>/dev/null | tr '*' ' ' | /usr/bin/grep 'idmap config *' | /usr/bin/grep 'range' | /bin/awk '{print $6}'`
+	# See get_backend: the default ("*") domain only.
+	value=`/usr/bin/testparm -vs 2>/dev/null | /usr/bin/grep -F 'idmap config * :' | /usr/bin/grep 'range' | /bin/awk '{print $NF}'`
 	echo "$value"
 }
 
