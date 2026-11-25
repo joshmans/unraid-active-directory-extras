@@ -80,9 +80,11 @@ which never matched a real domain, so they had no effect.
 
 ## Changelog
 
-See [`CHANGES.md`](./CHANGES.md) (kept separate from the `.plg`'s embedded
-`<CHANGES>` block so it's easier to read on GitHub; the `.plg` block should
-stay in sync with this for CA's changelog viewer).
+See [`CHANGELOG.md`](./CHANGELOG.md). Its text is also shown in the `.plg`'s `<CHANGES>` block, which the build script fills in from it.
+
+## Releasing
+
+Add an entry at the top of `CHANGELOG.md` with the new version (`YYYY.MM.DD`, plus a letter for a second release the same day) and merge the PR. GitHub Actions then runs the tests, builds the package, publishes the GitHub release and updates the `.plg` with the version and SHA-256. Do not edit the version or hash in the `.plg` by hand.
 
 ## Contributing
 

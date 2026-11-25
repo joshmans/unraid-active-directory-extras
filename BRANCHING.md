@@ -18,20 +18,21 @@ git checkout -b <branch-name>
 #    or edit directly)
 
 # 4. Update the changelog in the SAME branch, before opening the PR —
-#    not as a follow-up commit after merging. Two files, same entry:
+#    not as a follow-up commit after merging:
 #
-#    a) CHANGES.md — add a bullet under "## Unreleased"
-#    b) active.directory.plg — add/extend a dated block in the
-#       <CHANGES> entity near the top of the file
+#    CHANGELOG.md — add a bullet under a new "## <version>" heading at the
+#    top. Merging it IS the release: GitHub Actions builds the package,
+#    publishes the release and updates active.directory.plg (version,
+#    SHA-256 and the <CHANGES> text). Do not edit the .plg's version or
+#    hash by hand
 #
-#    Use the exact commit message format from the table below for both —
-#    keeps CHANGES.md, the .plg block, and the git log all saying the
-#    same thing.
+#    Use the exact commit message format from the table below —
+#    keeps CHANGELOG.md and the git log saying the same thing.
 
 # 5. Stage only the file(s) relevant to this fix — don't sweep in
-#    unrelated changes. This should now include CHANGES.md and
-#    active.directory.plg alongside the actual code file(s).
-git add <path/to/file> CHANGES.md active.directory.plg
+#    unrelated changes. This should include CHANGELOG.md alongside the
+#    actual code file(s).
+git add <path/to/file> CHANGELOG.md
 git status                     # confirm only the intended file(s) are staged —
                                 # this is the step that catches an accidental
                                 # `git add .` sweeping in unrelated changes
@@ -50,7 +51,7 @@ gh pr create --fill
 #    - No unexpected `old mode`/`new mode` lines (executable bit lost —
 #      common when copying script files out of chat downloads; fix with
 #      `chmod +x` before committing)
-#    - CHANGES.md and the .plg block are both present and match
+#    - CHANGELOG.md has the entry, with a new version heading at the top
 gh pr diff
 
 # 9. Merge and clean up
@@ -109,7 +110,7 @@ Lower priority, no rush. Not blocking anything, safe to pick up whenever.
 | CI lint workflow (`chore/shellcheck-ci` from the table above) | Add a GitHub Action running `shellcheck` + `php -l` on push/PR. Cheap now that the codebase is stable; catches regressions on future changes automatically. |
 | i18n / language string bundle | The page uses `_(...)_ ` translation tags throughout but there's no actual translation file backing them (unlike some of dlandon's other plugins, which register strings via PRs into `unraid/lang-en_US`). Low priority unless non-English users are a priority. |
 | Real support thread (Phase 6 of `PUBLISHING_CHECKLIST.md`) | `supportURL` in the `.plg` is currently a placeholder pointing at GitHub Issues. Not code — just a "whenever ready to publicize" task. |
-| Final packaged `.tgz` + push | Once all of the above (or whatever subset is done) lands, do one final repackage of `active.directory/` into a fresh versioned `.tgz`, recompute SHA256, update the `.plg`'s version/URL/hash entities, and push — this is the actual artifact Unraid's plugin installer downloads, so it needs to reflect everything, not just what was true as of enhancement #5. |
+| Final packaged release | Done by GitHub Actions now: merging a new version heading in `CHANGELOG.md` builds the package, publishes the release and updates the `.plg`. |
 
 ## Branch reference — Fork setup itself (not from the brief)
 
