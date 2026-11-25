@@ -14,7 +14,6 @@
 # configured value doesn't look safe - this script deletes files, so an
 # unvalidated path is a real risk, not just a cosmetic concern.
 
-TDB_BACKUP_PATH_DEFAULT="/boot/config/plugins/active.directory/database"
 CONFIG="/boot/config/plugins/active.directory/active.directory.cfg"
 KEEP_COUNT=5
 
