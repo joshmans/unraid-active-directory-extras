@@ -30,7 +30,7 @@ jobs:
           #   SC2188 - redirection with no command, e.g. `> file` used as
           #            a truncate idiom (warning) - intentional in the
           #            original apply_settings() config-clearing step
-          shellcheck --exclude=SC2006,SC2086,SC2188 \
+          shellcheck -x -P SCRIPTDIR --exclude=SC2006,SC2086,SC2188 \
             active.directory/scripts/rc.active.directory \
             active.directory/scripts/rc.startup \
             active.directory/scripts/rc.shutdown \

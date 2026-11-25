@@ -20,7 +20,6 @@
 # configured value doesn't look safe - this runs unattended at startup and
 # must never fail hard over a bad config value.
 
-TDB_BACKUP_PATH_DEFAULT="/boot/config/plugins/active.directory/database"
 CONFIG="/boot/config/plugins/active.directory/active.directory.cfg"
 TDB_DEST="/var/lib/samba"
 
